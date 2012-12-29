@@ -53,6 +53,14 @@ struct packet_header {
   packet_opcode opcode;
 };
 
+static const int max_rcon_response_text = 80;
+
+struct rcon_response_packet {
+  packet_header header;
+  std::uint16_t text_length;
+  char          text[max_rcon_response_text];
+};
+
 #pragma pack(pop)
 
 void send_rcon_command(boost::asio::ip::udp::socket &socket,
@@ -60,38 +68,47 @@ void send_rcon_command(boost::asio::ip::udp::socket &socket,
                        const std::string &password,
                        const std::string &command)
 {
-  packet_header header;
+  packet_header send_header;
 
-  std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
-  header.address = static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong());
-  header.port    = static_cast<std::uint16_t>(endpoint.port());
-  header.opcode  = packet_opcode::rcon_command;
+  std::memcpy(&send_header.signature, &packet_signature, sizeof(send_header.signature));
+  send_header.address = static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong());
+  send_header.port    = static_cast<std::uint16_t>(endpoint.port());
+  send_header.opcode  = packet_opcode::rcon_command;
 
-  std::vector<boost::asio::const_buffer> buffers = {
-    boost::asio::buffer(&header.signature, sizeof(header.signature)),
-    boost::asio::buffer(&header.address,   sizeof(header.address)),
-    boost::asio::buffer(&header.port,      sizeof(header.port)),
-    boost::asio::buffer(&header.opcode,    sizeof(header.opcode))
+  std::vector<boost::asio::const_buffer> send_bufs = {
+    boost::asio::buffer(&send_header.signature, sizeof(send_header.signature)),
+    boost::asio::buffer(&send_header.address,   sizeof(send_header.address)),
+    boost::asio::buffer(&send_header.port,      sizeof(send_header.port)),
+    boost::asio::buffer(&send_header.opcode,    sizeof(send_header.opcode))
   };
 
   std::uint16_t password_length = password.length();
-  buffers.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
-  buffers.push_back(boost::asio::buffer(password.c_str(), password.length()));
+  send_bufs.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
+  send_bufs.push_back(boost::asio::buffer(password.c_str(), password.length()));
 
   std::uint16_t command_length = command.length();
-  buffers.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
-  buffers.push_back(boost::asio::buffer(command.c_str(), command.length()));
+  send_bufs.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
+  send_bufs.push_back(boost::asio::buffer(command.c_str(), command.length()));
 
-  socket.send(buffers);
+  socket.send(send_bufs);
 
-  std::size_t size = socket.available();
-  if (size >= sizeof(packet_header)) {
-    size -= socket.receive(boost::asio::buffer(&header, sizeof(header)));
-    while (size > 0) {
-      socket.receive(boost::asio::buffer(std::cout, size));
-      size = socket.available();
-    }
+  rcon_response_packet response;
+
+  std::vector<boost::asio::mutable_buffer> recv_bufs = {
+    boost::asio::buffer(&response.header.signature, sizeof(response.header.signature)),
+    boost::asio::buffer(&response.header.address,   sizeof(response.header.address)),
+    boost::asio::buffer(&response.header.port,      sizeof(response.header.port)),
+    boost::asio::buffer(&response.header.opcode,    sizeof(response.header.opcode)),
+    boost::asio::buffer(&response.text_length,      sizeof(response.text_length)),
+    boost::asio::buffer(&response.text,             sizeof(response.text))
+  };
+
+  do {
+    socket.receive(recv_bufs);
+    response.text[response.text_length] = '\0';
+    std::cout << response.text << std::endl;
   }
+  while (response.text_length > 0);
 }
 
 int main(int argc, char **argv) {
