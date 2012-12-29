@@ -63,8 +63,8 @@ void send_rcon_command(boost::asio::ip::udp::socket &socket,
   packet_header header;
 
   std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
-  header.address = htonl(static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong()));
-  header.port    = htons(static_cast<std::uint16_t>(endpoint.port()));
+  header.address = static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong());
+  header.port    = static_cast<std::uint16_t>(endpoint.port());
   header.opcode  = packet_opcode::rcon_command;
 
   std::vector<boost::asio::const_buffer> buffers = {
