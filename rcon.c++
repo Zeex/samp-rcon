@@ -41,18 +41,27 @@ int main(int argc, char **argv) {
   std::string command(argv[4]);
 
   try {
-    boost::asio::io_service service;
-    boost::asio::ip::udp::socket socket(service);
+    boost::asio::io_service io_service;
 
-    auto address = boost::asio::ip::address::from_string(host);
-    boost::asio::ip::udp::endpoint server(address, boost::lexical_cast<short>(port));
-    socket.connect(server);
+    boost::asio::ip::udp::socket socket(io_service);
+    boost::asio::ip::udp::endpoint endpoint;
+
+    boost::asio::ip::udp::resolver resolver(io_service);
+    boost::asio::ip::udp::resolver::query query(host, port);
+
+    for (auto iterator = resolver.resolve(query);
+         iterator != boost::asio::ip::udp::resolver::iterator();
+         ++iterator)
+    {
+      endpoint = *iterator;
+      socket.connect(endpoint);
+    }
 
     packet_header header;
 
     std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
-    header.address = htonl(static_cast<std::uint32_t>(server.address().to_v4().to_ulong()));
-    header.port    = htons(static_cast<std::uint16_t>(server.port()));
+    header.address = htonl(static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong()));
+    header.port    = htons(static_cast<std::uint16_t>(endpoint.port()));
     header.opcode  = packet_opcode::rcon_command;
 
     std::vector<boost::asio::const_buffer> buffers = {
@@ -70,11 +79,11 @@ int main(int argc, char **argv) {
     buffers.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
     buffers.push_back(boost::asio::buffer(command.c_str(), command.length()));
 
-    socket.send_to(buffers, server);
+    socket.send_to(buffers, endpoint);
 
     std::size_t size;
     while ((size = socket.available()) > 0) {
-      socket.receive_from(boost::asio::buffer(std::cout, size), server);
+      socket.receive_from(boost::asio::buffer(std::cout, size), endpoint);
     }
 
     socket.close();
