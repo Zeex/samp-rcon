@@ -153,9 +153,8 @@ int main(int argc, char **argv) {
       socket.connect(endpoint);
     }
 
-    std::cout << "connected to " << endpoint << std::endl;
-
     if (interactive) {
+      std::cout << "connected to " << endpoint << std::endl;
       while (getline(std::cin, command)) {
         send_rcon_command(socket, endpoint, password, command);
       }
