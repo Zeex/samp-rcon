@@ -82,13 +82,13 @@ void send_rcon_command(boost::asio::ip::udp::socket &socket,
   buffers.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
   buffers.push_back(boost::asio::buffer(command.c_str(), command.length()));
 
-  socket.send_to(buffers, endpoint);
+  socket.send(buffers);
 
   std::size_t size = socket.available();
   if (size >= sizeof(packet_header)) {
-    size -= socket.receive_from(boost::asio::buffer(&header, sizeof(header)), endpoint);
+    size -= socket.receive(boost::asio::buffer(&header, sizeof(header)));
     while (size > 0) {
-      socket.receive_from(boost::asio::buffer(std::cout, size), endpoint);
+      socket.receive(boost::asio::buffer(std::cout, size));
       size = socket.available();
     }
   }
