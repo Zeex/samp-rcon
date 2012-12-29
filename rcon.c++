@@ -44,12 +44,16 @@ enum class packet_opcode : char {
   ping          = 'p'
 };
 
+#pragma pack(push, 1)
+
 struct packet_header {
   char          signature[4];
   std::uint32_t address;
   std::uint16_t port;
   packet_opcode opcode;
 };
+
+#pragma pack(pop)
 
 void send_rcon_command(boost::asio::ip::udp::socket &socket,
                        boost::asio::ip::udp::endpoint &endpoint,
@@ -80,9 +84,13 @@ void send_rcon_command(boost::asio::ip::udp::socket &socket,
 
   socket.send_to(buffers, endpoint);
 
-  std::size_t size;
-  while ((size = socket.available()) > 0) {
-    socket.receive_from(boost::asio::buffer(std::cout, size), endpoint);
+  std::size_t size = socket.available();
+  if (size >= sizeof(packet_header)) {
+    size -= socket.receive_from(boost::asio::buffer(&header, sizeof(header)), endpoint);
+    while (size > 0) {
+      socket.receive_from(boost::asio::buffer(std::cout, size), endpoint);
+      size = socket.available();
+    }
   }
 }
 
