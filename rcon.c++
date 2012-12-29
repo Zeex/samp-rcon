@@ -9,6 +9,9 @@
 #include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
+namespace opt = boost::program_options;
+namespace net = boost::asio;
+
 static const char packet_signature[] = {'S', 'A', 'M', 'P'};
 
 enum class packet_opcode : char {
@@ -27,14 +30,47 @@ struct packet_header {
   packet_opcode opcode;
 };
 
-int main(int argc, char **argv) {
-  namespace opt = boost::program_options;
-  namespace net = boost::asio;
+void send_rcon_command(net::ip::udp::socket &socket,
+                       net::ip::udp::endpoint &endpoint,
+                       const std::string &password,
+                       const std::string &command)
+{
+  packet_header header;
 
+  std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
+  header.address = htonl(static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong()));
+  header.port    = htons(static_cast<std::uint16_t>(endpoint.port()));
+  header.opcode  = packet_opcode::rcon_command;
+
+  std::vector<net::const_buffer> buffers = {
+    net::buffer(&header.signature, sizeof(header.signature)),
+    net::buffer(&header.address,   sizeof(header.address)),
+    net::buffer(&header.port,      sizeof(header.port)),
+    net::buffer(&header.opcode,    sizeof(header.opcode))
+  };
+
+  std::uint16_t password_length = password.length();
+  buffers.push_back(net::buffer(&password_length, sizeof(password_length)));
+  buffers.push_back(net::buffer(password.c_str(), password.length()));
+
+  std::uint16_t command_length = command.length();
+  buffers.push_back(net::buffer(&command_length, sizeof(command_length)));
+  buffers.push_back(net::buffer(command.c_str(), command.length()));
+
+  socket.send_to(buffers, endpoint);
+
+  std::size_t size;
+  while ((size = socket.available()) > 0) {
+    socket.receive_from(net::buffer(std::cout, size), endpoint);
+  }
+}
+
+int main(int argc, char **argv) {
   std::string host;
   std::string port;
   std::string password;
   std::string command;
+  bool interactive;
 
   try {
     opt::options_description desc("Available options");
@@ -49,6 +85,8 @@ int main(int argc, char **argv) {
        "set RCON password")
       ("command,c", opt::value<std::string>(&command)->required(),
        "set RCON command to be sent")
+      ("interactive,i",
+       "start in interactive mode")
     ;
 
     opt::variables_map vars;
@@ -59,6 +97,8 @@ int main(int argc, char **argv) {
                 << " [options]\n\n" << desc << std::endl;
       std::exit(EXIT_SUCCESS);
     }
+
+    interactive = vars.count("interactive");
 
     vars.notify();
   }
@@ -84,33 +124,14 @@ int main(int argc, char **argv) {
       socket.connect(endpoint);
     }
 
-    packet_header header;
+    std::cout << "connected to " << endpoint << std::endl;
 
-    std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
-    header.address = htonl(static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong()));
-    header.port    = htons(static_cast<std::uint16_t>(endpoint.port()));
-    header.opcode  = packet_opcode::rcon_command;
-
-    std::vector<net::const_buffer> buffers = {
-      net::buffer(&header.signature, sizeof(header.signature)),
-      net::buffer(&header.address,   sizeof(header.address)),
-      net::buffer(&header.port,      sizeof(header.port)),
-      net::buffer(&header.opcode,    sizeof(header.opcode))
-    };
-
-    std::uint16_t password_length = password.length();
-    buffers.push_back(net::buffer(&password_length, sizeof(password_length)));
-    buffers.push_back(net::buffer(password.c_str(), password.length()));
-
-    std::uint16_t command_length = command.length();
-    buffers.push_back(net::buffer(&command_length, sizeof(command_length)));
-    buffers.push_back(net::buffer(command.c_str(), command.length()));
-
-    socket.send_to(buffers, endpoint);
-
-    std::size_t size;
-    while ((size = socket.available()) > 0) {
-      socket.receive_from(net::buffer(std::cout, size), endpoint);
+    if (interactive) {
+      while (getline(std::cin, command)) {
+        send_rcon_command(socket, endpoint, password, command);
+      }
+    } else {
+      send_rcon_command(socket, endpoint, password, command);
     }
 
     socket.close();
