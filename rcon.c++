@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
        "set server port")
       ("password,w", boost::program_options::value<std::string>(&password)->required(),
        "set RCON password")
-      ("command,c", boost::program_options::value<std::string>(&command)->required(),
+      ("command,c", boost::program_options::value<std::string>(&command),
        "set RCON command to be sent")
       ("interactive,i",
        "start in interactive mode")
@@ -165,7 +165,9 @@ int main(int argc, char **argv) {
         }
       }
     } else {
-      send_rcon_command(socket, endpoint, password, command);
+      if (!command.empty()) {
+        send_rcon_command(socket, endpoint, password, command);
+      }
     }
 
     socket.close();
