@@ -8,7 +8,9 @@
 #include <vector>
 
 #include <boost/asio.hpp>
+#include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
+#include <boost/program_options.hpp>
 
 static const char packet_signature[] = {'S', 'A', 'M', 'P'};
 
@@ -29,28 +31,56 @@ struct packet_header {
 };
 
 int main(int argc, char **argv) {
+  namespace opt = boost::program_options;
+  namespace net = boost::asio;
 
-  if (argc < 5) {
-    std::cout << "usage: rcon <host> <port> <password> <command>" << std::endl;
+  std::string host;
+  std::string port;
+  std::string password;
+  std::string command;
+
+  try {
+    opt::options_description desc("Available options");
+    desc.add_options()
+      ("help,h",
+       "show this message and exit")
+      ("host,a", opt::value<std::string>(&host)->default_value("localhost"),
+       "set server IP address or hostname")
+      ("port,p", opt::value<std::string>(&port)->default_value("7777"),
+       "set server port")
+      ("password,w", opt::value<std::string>(&password)->required(),
+       "set RCON password")
+      ("command,c", opt::value<std::string>(&command)->required(),
+       "set RCON command to be sent")
+    ;
+
+    opt::variables_map vars;
+    opt::store(opt::parse_command_line(argc, argv, desc), vars);
+
+    if (vars.count("help")) {
+      std::cout << "Usage: " << boost::filesystem::basename(argv[0])
+                << " [options]\n\n" << desc << std::endl;
+      std::exit(EXIT_SUCCESS);
+    }
+
+    vars.notify();
+  }
+  catch (opt::required_option &e) {
+    std::cerr << e.what() << std::endl;
     std::exit(EXIT_FAILURE);
   }
 
-  std::string host(argv[1]);
-  std::string port(argv[2]);
-  std::string password(argv[3]);
-  std::string command(argv[4]);
-
   try {
-    boost::asio::io_service io_service;
+    net::io_service io_service;
 
-    boost::asio::ip::udp::socket socket(io_service);
-    boost::asio::ip::udp::endpoint endpoint;
+    net::ip::udp::socket socket(io_service);
+    net::ip::udp::endpoint endpoint;
 
-    boost::asio::ip::udp::resolver resolver(io_service);
-    boost::asio::ip::udp::resolver::query query(host, port);
+    net::ip::udp::resolver resolver(io_service);
+    net::ip::udp::resolver::query query(host, port);
 
     for (auto iterator = resolver.resolve(query);
-         iterator != boost::asio::ip::udp::resolver::iterator();
+         iterator != net::ip::udp::resolver::iterator();
          ++iterator)
     {
       endpoint = *iterator;
@@ -64,32 +94,33 @@ int main(int argc, char **argv) {
     header.port    = htons(static_cast<std::uint16_t>(endpoint.port()));
     header.opcode  = packet_opcode::rcon_command;
 
-    std::vector<boost::asio::const_buffer> buffers = {
-      boost::asio::buffer(&header.signature, sizeof(header.signature)),
-      boost::asio::buffer(&header.address,   sizeof(header.address)),
-      boost::asio::buffer(&header.port,      sizeof(header.port)),
-      boost::asio::buffer(&header.opcode,    sizeof(header.opcode))
+    std::vector<net::const_buffer> buffers = {
+      net::buffer(&header.signature, sizeof(header.signature)),
+      net::buffer(&header.address,   sizeof(header.address)),
+      net::buffer(&header.port,      sizeof(header.port)),
+      net::buffer(&header.opcode,    sizeof(header.opcode))
     };
 
     std::uint16_t password_length = password.length();
-    buffers.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
-    buffers.push_back(boost::asio::buffer(password.c_str(), password.length()));
+    buffers.push_back(net::buffer(&password_length, sizeof(password_length)));
+    buffers.push_back(net::buffer(password.c_str(), password.length()));
 
     std::uint16_t command_length = command.length();
-    buffers.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
-    buffers.push_back(boost::asio::buffer(command.c_str(), command.length()));
+    buffers.push_back(net::buffer(&command_length, sizeof(command_length)));
+    buffers.push_back(net::buffer(command.c_str(), command.length()));
 
     socket.send_to(buffers, endpoint);
 
     std::size_t size;
     while ((size = socket.available()) > 0) {
-      socket.receive_from(boost::asio::buffer(std::cout, size), endpoint);
+      socket.receive_from(net::buffer(std::cout, size), endpoint);
     }
 
     socket.close();
   }
   catch (boost::system::system_error &e) {
-    std::cout << "error: " << e.what() << std::endl;
+    std::cerr << e.what() << std::endl;
+    std::exit(EXIT_FAILURE);
   }
 
   std::exit(EXIT_SUCCESS);
