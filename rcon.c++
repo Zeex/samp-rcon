@@ -156,7 +156,13 @@ int main(int argc, char **argv) {
     if (interactive) {
       std::cout << "connected to " << endpoint << std::endl;
       while (getline(std::cin, command)) {
-        send_rcon_command(socket, endpoint, password, command);
+        try {
+          send_rcon_command(socket, endpoint, password, command);
+        }
+        catch (boost::system::system_error &e) {
+          std::cerr << e.what() << std::endl;
+          continue;
+        }
       }
     } else {
       send_rcon_command(socket, endpoint, password, command);
