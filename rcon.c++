@@ -102,7 +102,7 @@ int main(int argc, char **argv) {
 
     vars.notify();
   }
-  catch (opt::required_option &e) {
+  catch (opt::error &e) {
     std::cerr << e.what() << std::endl;
     std::exit(EXIT_FAILURE);
   }
