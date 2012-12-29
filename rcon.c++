@@ -44,8 +44,6 @@ enum class packet_opcode : char {
   ping          = 'p'
 };
 
-#pragma pack(push, 1)
-
 struct packet_header {
   char          signature[4];
   std::uint32_t address;
@@ -61,55 +59,97 @@ struct rcon_response_packet {
   char          text[max_rcon_response_text];
 };
 
-#pragma pack(pop)
-
-void send_rcon_command(boost::asio::ip::udp::socket &socket,
-                       boost::asio::ip::udp::endpoint &endpoint,
-                       const std::string &password,
-                       const std::string &command)
-{
-  packet_header send_header;
-
-  std::memcpy(&send_header.signature, &packet_signature, sizeof(send_header.signature));
-  send_header.address = static_cast<std::uint32_t>(endpoint.address().to_v4().to_ulong());
-  send_header.port    = static_cast<std::uint16_t>(endpoint.port());
-  send_header.opcode  = packet_opcode::rcon_command;
-
-  std::vector<boost::asio::const_buffer> send_bufs = {
-    boost::asio::buffer(&send_header.signature, sizeof(send_header.signature)),
-    boost::asio::buffer(&send_header.address,   sizeof(send_header.address)),
-    boost::asio::buffer(&send_header.port,      sizeof(send_header.port)),
-    boost::asio::buffer(&send_header.opcode,    sizeof(send_header.opcode))
-  };
-
-  std::uint16_t password_length = password.length();
-  send_bufs.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
-  send_bufs.push_back(boost::asio::buffer(password.c_str(), password.length()));
-
-  std::uint16_t command_length = command.length();
-  send_bufs.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
-  send_bufs.push_back(boost::asio::buffer(command.c_str(), command.length()));
-
-  socket.send(send_bufs);
-
-  rcon_response_packet response;
-
-  std::vector<boost::asio::mutable_buffer> recv_bufs = {
-    boost::asio::buffer(&response.header.signature, sizeof(response.header.signature)),
-    boost::asio::buffer(&response.header.address,   sizeof(response.header.address)),
-    boost::asio::buffer(&response.header.port,      sizeof(response.header.port)),
-    boost::asio::buffer(&response.header.opcode,    sizeof(response.header.opcode)),
-    boost::asio::buffer(&response.text_length,      sizeof(response.text_length)),
-    boost::asio::buffer(&response.text,             sizeof(response.text))
-  };
-
-  do {
-    socket.receive(recv_bufs);
-    response.text[response.text_length] = '\0';
-    std::cout << response.text << std::endl;
+class rcon_client {
+public:
+  rcon_client(boost::asio::io_service &io_service)
+    : io_service_(io_service),
+      socket_(io_service),
+      recv_bufs_({
+        boost::asio::buffer(&response_.header.signature, sizeof(response_.header.signature)),
+        boost::asio::buffer(&response_.header.address,   sizeof(response_.header.address)),
+        boost::asio::buffer(&response_.header.port,      sizeof(response_.header.port)),
+        boost::asio::buffer(&response_.header.opcode,    sizeof(response_.header.opcode)),
+        boost::asio::buffer(&response_.text_length,      sizeof(response_.text_length)),
+        boost::asio::buffer(&response_.text,             sizeof(response_.text))
+      })
+  {
   }
-  while (response.text_length > 0);
-}
+
+  void connect(const std::string &host, const std::string &port,
+               const std::string &password)
+  {
+    boost::asio::ip::udp::endpoint endpoint;
+
+    boost::asio::ip::udp::resolver resolver(io_service_);
+    boost::asio::ip::udp::resolver::query query(host, port);
+
+    for (auto iterator = resolver.resolve(query);
+         iterator != boost::asio::ip::udp::resolver::iterator();
+         ++iterator)
+    {
+      endpoint = *iterator;
+      socket_.connect(endpoint);
+    }
+
+    auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
+                                                          std::placeholders::_2);
+    socket_.async_receive(recv_bufs_, handler);
+  }
+
+  void disconnect() {
+    socket_.close();
+  }
+
+  void send(const std::string &password, const std::string &command) {
+    packet_header header;
+
+    std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
+    header.address = static_cast<std::uint32_t>(socket_.remote_endpoint().address().to_v4().to_ulong());
+    header.port    = static_cast<std::uint16_t>(socket_.remote_endpoint().port());
+    header.opcode  = packet_opcode::rcon_command;
+
+    std::vector<boost::asio::const_buffer> send_bufs = {
+      boost::asio::buffer(&header.signature, sizeof(header.signature)),
+      boost::asio::buffer(&header.address,   sizeof(header.address)),
+      boost::asio::buffer(&header.port,      sizeof(header.port)),
+      boost::asio::buffer(&header.opcode,    sizeof(header.opcode))
+    };
+
+    std::uint16_t password_length = password.length();
+    send_bufs.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
+    send_bufs.push_back(boost::asio::buffer(password.c_str(), password.length()));
+
+    std::uint16_t command_length = command.length();
+    send_bufs.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
+    send_bufs.push_back(boost::asio::buffer(command.c_str(), command.length()));
+
+    socket_.send(send_bufs);
+  }
+
+  std::string output() const {
+    return std::string(response_.text, response_.text_length);
+  }
+
+  void receive(const boost::system::error_code &error, std::size_t nbytes) {
+    std::cout << output() << std::endl;
+
+    if (error == 0) {
+      auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
+                                                            std::placeholders::_2);
+      socket_.async_receive(recv_bufs_, handler);
+    } else {
+      disconnect();
+    }
+  }
+
+private:
+  boost::asio::io_service &io_service_;
+  boost::asio::ip::udp::socket socket_;
+
+private:
+  rcon_response_packet response_;
+  std::vector<boost::asio::mutable_buffer> recv_bufs_;
+};
 
 int main(int argc, char **argv) {
   std::string host;
@@ -155,39 +195,10 @@ int main(int argc, char **argv) {
 
   try {
     boost::asio::io_service io_service;
-
-    boost::asio::ip::udp::socket socket(io_service);
-    boost::asio::ip::udp::endpoint endpoint;
-
-    boost::asio::ip::udp::resolver resolver(io_service);
-    boost::asio::ip::udp::resolver::query query(host, port);
-
-    for (auto iterator = resolver.resolve(query);
-         iterator != boost::asio::ip::udp::resolver::iterator();
-         ++iterator)
-    {
-      endpoint = *iterator;
-      socket.connect(endpoint);
-    }
-
-    if (interactive) {
-      std::cout << "connected to " << endpoint << std::endl;
-      while (getline(std::cin, command)) {
-        try {
-          send_rcon_command(socket, endpoint, password, command);
-        }
-        catch (boost::system::system_error &e) {
-          std::cerr << e.what() << std::endl;
-          continue;
-        }
-      }
-    } else {
-      if (!command.empty()) {
-        send_rcon_command(socket, endpoint, password, command);
-      }
-    }
-
-    socket.close();
+    rcon_client rcon(io_service);
+    rcon.connect(host, port, password);
+    rcon.send(password, command);
+    io_service.run();
   }
   catch (boost::system::system_error &e) {
     std::cerr << e.what() << std::endl;
