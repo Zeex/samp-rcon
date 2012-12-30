@@ -178,7 +178,6 @@ int main(int argc, char **argv) {
   std::string password;
   std::string command;
   long timeout_ms;
-  bool interactive;
 
   try {
     boost::program_options::options_description desc("Available options");
@@ -195,8 +194,6 @@ int main(int argc, char **argv) {
        "set RCON command to be sent")
       ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(100),
        "set timeout in milliseconds")
-      ("interactive,i",
-       "start in interactive mode")
     ;
 
     boost::program_options::variables_map vars;
@@ -207,8 +204,6 @@ int main(int argc, char **argv) {
                 << " [options]\n\n" << desc << std::endl;
       std::exit(EXIT_SUCCESS);
     }
-
-    interactive = vars.count("interactive");
 
     vars.notify();
   }
