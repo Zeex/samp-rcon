@@ -45,6 +45,7 @@ class rcon_client {
 public:
   rcon_client(boost::asio::io_service &io_service,
               boost::posix_time::milliseconds timeout);
+  ~rcon_client();
 
   void connect(const std::string &host, const std::string &port,
                const std::string &password);

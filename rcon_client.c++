@@ -48,6 +48,10 @@ rcon_client::rcon_client(boost::asio::io_service &io_service,
 {
 }
 
+rcon_client::~rcon_client() {
+  disconnect();
+}
+
 void rcon_client::connect(const std::string &host, const std::string &port,
                           const std::string &password) {
   assert(!password.empty());
