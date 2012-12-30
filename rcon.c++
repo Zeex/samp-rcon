@@ -53,7 +53,7 @@ int main(int argc, char **argv) {
       ("command,c", boost::program_options::value<std::string>(&command),
        "set RCON command to be sent")
       ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(100),
-       "set timeout in milliseconds")
+       "set connection timeout (in milliseconds)")
     ;
 
     boost::program_options::variables_map vars;
