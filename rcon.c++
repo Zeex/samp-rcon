@@ -61,8 +61,9 @@ struct rcon_response_packet {
 
 class rcon_client {
 public:
-  rcon_client(boost::asio::io_service &io_service)
+  rcon_client(boost::asio::io_service &io_service, boost::posix_time::milliseconds timeout)
     : io_service_(io_service),
+      timeout_timer_(io_service, timeout),
       socket_(io_service),
       recv_bufs_({
         boost::asio::buffer(&response_.header.signature, sizeof(response_.header.signature)),
@@ -90,10 +91,8 @@ public:
       endpoint = *iterator;
       socket_.connect(endpoint);
     }
-
-    auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
-                                                          std::placeholders::_2);
-    socket_.async_receive(recv_bufs_, handler);
+    
+    do_async_receive();
   }
 
   void disconnect() {
@@ -130,20 +129,40 @@ public:
     return std::string(response_.text, response_.text_length);
   }
 
+  void timeout(const boost::system::error_code &error) {
+    timeout_handler_(error);
+  }
+
+  template<typename TimeoutHandler>
+  void on_timeout(TimeoutHandler handler) {
+    timeout_handler_ = handler;
+  }
+
   void receive(const boost::system::error_code &error, std::size_t nbytes) {
     std::cout << output() << std::endl;
 
     if (error == 0) {
-      auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
-                                                            std::placeholders::_2);
-      socket_.async_receive(recv_bufs_, handler);
+      do_async_receive();
     } else {
       disconnect();
     }
   }
 
+  void do_async_receive() {
+      auto timeout = std::bind(&rcon_client::timeout, this, std::placeholders::_1);
+      timeout_timer_.async_wait(timeout);
+
+      auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
+                                                            std::placeholders::_2);
+      socket_.async_receive(recv_bufs_, handler);
+  }
+
 private:
   boost::asio::io_service &io_service_;
+  boost::asio::deadline_timer timeout_timer_;;
+  std::function<void (
+    const boost::system::error_code &)
+  > timeout_handler_;
   boost::asio::ip::udp::socket socket_;
 
 private:
@@ -156,6 +175,7 @@ int main(int argc, char **argv) {
   std::string port;
   std::string password;
   std::string command;
+  long timeout_ms;
   bool interactive;
 
   try {
@@ -171,6 +191,8 @@ int main(int argc, char **argv) {
        "set RCON password")
       ("command,c", boost::program_options::value<std::string>(&command),
        "set RCON command to be sent")
+      ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(100),
+       "set timeout in milliseconds")
       ("interactive,i",
        "start in interactive mode")
     ;
@@ -195,9 +217,22 @@ int main(int argc, char **argv) {
 
   try {
     boost::asio::io_service io_service;
-    rcon_client rcon(io_service);
+    auto timeout = boost::posix_time::milliseconds(timeout_ms);
+
+    auto exit_timeout = [](const boost::system::error_code &error) {
+      if (error) {
+        std::cerr << boost::system::system_error(error).what() << std::endl;
+        std::exit(EXIT_FAILURE);
+      } else {
+        std::exit(EXIT_SUCCESS);
+      }
+    };
+
+    rcon_client rcon(io_service, timeout);
+    rcon.on_timeout(exit_timeout);
     rcon.connect(host, port, password);
     rcon.send(password, command);
+
     io_service.run();
   }
   catch (boost::system::system_error &e) {
