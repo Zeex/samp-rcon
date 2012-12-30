@@ -112,11 +112,12 @@ void rcon_client::on_receive(const boost::system::error_code &error, std::size_t
 }
 
 void rcon_client::do_async_receive() {
-  auto timeout = std::bind(&rcon_client::on_timeout, this, std::placeholders::_1);
+  using namespace std::placeholders;
+
+  auto timeout = std::bind(&rcon_client::on_timeout, this, _1);
   timeout_timer_.async_wait(timeout);
 
-  auto handler = std::bind(&rcon_client::on_receive, this,
-                           std::placeholders::_1, std::placeholders::_2);
+  auto handler = std::bind(&rcon_client::on_receive, this,_1, _2);
   socket_.async_receive(recv_bufs_, handler);
 }
 

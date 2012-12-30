@@ -60,8 +60,8 @@ int main(int argc, char **argv) {
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vars);
 
     if (vars.count("help")) {
-      std::cout << "Usage: " << boost::filesystem::basename(argv[0])
-                << " [options]\n\n" << desc << std::endl;
+      std::cout << "Usage: " << boost::filesystem::basename(argv[0]) << " [options]\n\n"
+                << desc << std::endl;
       std::exit(EXIT_SUCCESS);
     }
 
@@ -88,13 +88,11 @@ int main(int argc, char **argv) {
       }
     });
 
-    rcon.set_receive_handler([&rcon](const boost::system::error_code &error,
-                                     std::size_t nbytes) {
+    rcon.set_receive_handler([&rcon](const boost::system::error_code &error, std::size_t nbytes) {
       std::cout << rcon.response_text() << std::endl;
     });
 
     rcon.send(command);
-
     io_service.run();
   }
   catch (boost::system::system_error &e) {
