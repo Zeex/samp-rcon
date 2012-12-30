@@ -57,18 +57,11 @@ void rcon_client::connect(const std::string &host, const std::string &port,
   assert(!password.empty());
   password_ = password;
 
-  boost::asio::ip::udp::endpoint endpoint;
-
   boost::asio::ip::udp::resolver resolver(io_service_);
   boost::asio::ip::udp::resolver::query query(host, port);
 
-  for (auto iterator = resolver.resolve(query);
-       iterator != boost::asio::ip::udp::resolver::iterator();
-       ++iterator)
-  {
-    endpoint = *iterator;
-    socket_.connect(endpoint);
-  }
+  boost::asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
+  socket_.connect(endpoint);
 
   do_async_receive();
 }
