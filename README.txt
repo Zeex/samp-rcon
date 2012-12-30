@@ -14,3 +14,6 @@ To build this you will need Boost 1.49+ and CMake 2.8+
 
   sudo apt-get install libboost-dev-all
   sudo apt-get install cmake
+  cd /path/to/samp-rcon/
+  cmake .
+  make
