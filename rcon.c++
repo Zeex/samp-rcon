@@ -32,11 +32,12 @@
 
 #include "rcon_client.h++"
 
+static const char prompt_string[] = "rcon: ";
+
 int main(int argc, char **argv) {
   std::string host;
   std::string port;
   std::string password;
-  std::string command;
   long timeout_ms;
 
   try {
@@ -50,8 +51,6 @@ int main(int argc, char **argv) {
        "set server port")
       ("password,w", boost::program_options::value<std::string>(&password)->required(),
        "set RCON password")
-      ("command,c", boost::program_options::value<std::string>(&command)->required(),
-       "set RCON command to be sent")
       ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(150),
        "set connection timeout (in milliseconds)")
     ;
@@ -75,26 +74,38 @@ int main(int argc, char **argv) {
   try {
     boost::asio::io_service io_service;
 
-    rcon_client rcon(io_service);
-    rcon.connect(host, port, password);
+    boost::asio::ip::udp::resolver resolver(io_service);
+    boost::asio::ip::udp::resolver::query query(host, port);
+    boost::asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
-    rcon.set_timeout_handler([](const boost::system::error_code &error) {
+    rcon_client rcon(io_service, endpoint);
+
+    rcon.set_timeout_handler([&rcon](const boost::system::error_code &error) {
       if (error) {
         std::cerr << boost::system::system_error(error).what() << std::endl;
-        std::exit(EXIT_FAILURE);
       } else {
-        std::exit(EXIT_SUCCESS);
+        rcon.cancel();
       }
     });
 
+    std::string command;
     auto timeout = boost::posix_time::milliseconds(timeout_ms);
 
-    rcon.set_receive_handler([&rcon, &timeout](const boost::system::error_code &error, std::size_t nbytes) {
-      std::cout << rcon.response_text() << std::endl;
+    rcon.set_receive_handler([&rcon, &password, &command, &timeout](const boost::system::error_code &error,
+                                                                    std::size_t nbytes) {
+      if (error == boost::asio::error::operation_aborted) {
+        std::cout << prompt_string;
+        std::getline(std::cin, command);
+        rcon.send(password, command);
+      } else {
+        std::cout << rcon.response_text() << std::endl;
+      }
       rcon.receive(timeout);
     });
 
-    rcon.send(command);
+    std::cout << prompt_string;
+    std::getline(std::cin, command);
+    rcon.send(password, command);
     rcon.receive(timeout);
 
     io_service.run();

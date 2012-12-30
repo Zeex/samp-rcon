@@ -32,10 +32,11 @@
 
 #include "rcon_client.h++"
 
-rcon_client::rcon_client(boost::asio::io_service &io_service)
+rcon_client::rcon_client(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &endpoint)
   : io_service_(io_service),
-    timeout_timer_(io_service),
+    endpoint_(endpoint),
     socket_(io_service),
+    timeout_timer_(io_service),
     recv_bufs_({
       boost::asio::buffer(&response_.header.signature, sizeof(response_.header.signature)),
       boost::asio::buffer(&response_.header.address,   sizeof(response_.header.address)),
@@ -45,34 +46,19 @@ rcon_client::rcon_client(boost::asio::io_service &io_service)
       boost::asio::buffer(&response_.text,             sizeof(response_.text))
     })
 {
+  socket_.open(boost::asio::ip::udp::v4());
 }
 
 rcon_client::~rcon_client() {
-  disconnect();
-}
-
-void rcon_client::connect(const std::string &host, const std::string &port,
-                          const std::string &password) {
-  assert(!password.empty());
-  password_ = password;
-
-  boost::asio::ip::udp::resolver resolver(io_service_);
-  boost::asio::ip::udp::resolver::query query(host, port);
-
-  boost::asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
-  socket_.connect(endpoint);
-}
-
-void rcon_client::disconnect() {
   socket_.close();
 }
 
-void rcon_client::send(const std::string &command) {
+void rcon_client::send(const std::string &password, const std::string &command) {
   packet_header header;
 
   std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
-  header.address = static_cast<std::uint32_t>(socket_.remote_endpoint().address().to_v4().to_ulong());
-  header.port    = static_cast<std::uint16_t>(socket_.remote_endpoint().port());
+  header.address = static_cast<std::uint32_t>(endpoint_.address().to_v4().to_ulong());
+  header.port    = static_cast<std::uint16_t>(endpoint_.port());
   header.opcode  = packet_opcode::rcon_command;
 
   std::vector<boost::asio::const_buffer> send_bufs = {
@@ -82,30 +68,32 @@ void rcon_client::send(const std::string &command) {
     boost::asio::buffer(&header.opcode,    sizeof(header.opcode))
   };
 
-  std::uint16_t password_length = password_.length();
+  std::uint16_t password_length = password.length();
   send_bufs.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
-  send_bufs.push_back(boost::asio::buffer(password_.c_str(), password_.length()));
+  send_bufs.push_back(boost::asio::buffer(password.c_str(), password.length()));
 
   std::uint16_t command_length = command.length();
   send_bufs.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
   send_bufs.push_back(boost::asio::buffer(command.c_str(), command.length()));
 
-  socket_.send(send_bufs);
+  socket_.send_to(send_bufs, endpoint_);
+}
+
+void rcon_client::receive() {
+  rcon_client::receive(boost::posix_time::milliseconds(0));
 }
 
 void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
   using namespace std::placeholders;
 
   auto receive_handler = std::bind(&rcon_client::on_receive, this,_1, _2);
-  socket_.async_receive(recv_bufs_, receive_handler);
+  socket_.async_receive_from(recv_bufs_, endpoint_, receive_handler);
 
-  auto timer_handler = std::bind(&rcon_client::on_timeout, this, _1);
-  timeout_timer_.expires_from_now(timeout);
-  timeout_timer_.async_wait(timer_handler);
-}
-
-std::string rcon_client::response_text() const {
-  return std::string(response_.text, response_.text_length);
+  if (timeout.total_milliseconds() > 0) {
+    auto timer_handler = std::bind(&rcon_client::on_timeout, this, _1);
+    timeout_timer_.expires_from_now(timeout);
+    timeout_timer_.async_wait(timer_handler);
+  }
 }
 
 void rcon_client::on_receive(const boost::system::error_code &error, std::size_t nbytes) {
@@ -121,4 +109,12 @@ void rcon_client::on_timeout(const boost::system::error_code &error) {
   if (timeout_handler_) {
     timeout_handler_(error);
   }
+}
+
+void rcon_client::cancel() {
+  socket_.cancel();
+}
+
+std::string rcon_client::response_text() const {
+  return std::string(response_.text, response_.text_length);
 }
