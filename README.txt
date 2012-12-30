@@ -8,7 +8,7 @@ Available options:
   -p [ --port ] arg (=7777)      set server port
   -w [ --password ] arg          set RCON password
   -c [ --command ] arg           set RCON command to be sent
-  -t [ --timeout ] arg (=100)    set connection timeout (in milliseconds)
+  -t [ --timeout ] arg (=250)    set connection timeout (in milliseconds)
 
 To build this you will need Boost 1.49+ and CMake 2.8+
 
