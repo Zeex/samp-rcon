@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
        "set server port")
       ("password,w", boost::program_options::value<std::string>(&password)->required(),
        "set RCON password")
-      ("command,c", boost::program_options::value<std::string>(&command),
+      ("command,c", boost::program_options::value<std::string>(&command)->required(),
        "set RCON command to be sent")
       ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(100),
        "set connection timeout (in milliseconds)")
