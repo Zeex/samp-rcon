@@ -32,10 +32,9 @@
 
 #include "rcon_client.h++"
 
-rcon_client::rcon_client(boost::asio::io_service &io_service, 
-                         boost::posix_time::milliseconds timeout)
+rcon_client::rcon_client(boost::asio::io_service &io_service)
   : io_service_(io_service),
-    timeout_timer_(io_service, timeout),
+    timeout_timer_(io_service),
     socket_(io_service),
     recv_bufs_({
       boost::asio::buffer(&response_.header.signature, sizeof(response_.header.signature)),
@@ -62,8 +61,6 @@ void rcon_client::connect(const std::string &host, const std::string &port,
 
   boost::asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
   socket_.connect(endpoint);
-
-  do_async_receive();
 }
 
 void rcon_client::disconnect() {
@@ -96,32 +93,31 @@ void rcon_client::send(const std::string &command) {
   socket_.send(send_bufs);
 }
 
+void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
+  using namespace std::placeholders;
+
+  auto receive_handler = std::bind(&rcon_client::on_receive, this,_1, _2);
+  socket_.async_receive(recv_bufs_, receive_handler);
+
+  auto timer_handler = std::bind(&rcon_client::on_timeout, this, _1);
+  timeout_timer_.expires_from_now(timeout);
+  timeout_timer_.async_wait(timer_handler);
+}
+
 std::string rcon_client::response_text() const {
   return std::string(response_.text, response_.text_length);
 }
 
 void rcon_client::on_receive(const boost::system::error_code &error, std::size_t nbytes) {
-  if (error == 0) {
-    if (receive_handler_) {
-      receive_handler_(error, nbytes);
-    }
-    do_async_receive();
-  } else {
-    disconnect();
+  if (receive_handler_) {
+    receive_handler_(error, nbytes);
   }
 }
 
-void rcon_client::do_async_receive() {
-  using namespace std::placeholders;
-
-  auto timeout = std::bind(&rcon_client::on_timeout, this, _1);
-  timeout_timer_.async_wait(timeout);
-
-  auto handler = std::bind(&rcon_client::on_receive, this,_1, _2);
-  socket_.async_receive(recv_bufs_, handler);
-}
-
 void rcon_client::on_timeout(const boost::system::error_code &error) {
+  if (error == boost::asio::error::operation_aborted) {
+    return;
+  }
   if (timeout_handler_) {
     timeout_handler_(error);
   }

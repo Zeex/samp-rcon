@@ -74,9 +74,8 @@ int main(int argc, char **argv) {
 
   try {
     boost::asio::io_service io_service;
-    auto timeout = boost::posix_time::milliseconds(timeout_ms);
 
-    rcon_client rcon(io_service, timeout);
+    rcon_client rcon(io_service);
     rcon.connect(host, port, password);
 
     rcon.set_timeout_handler([](const boost::system::error_code &error) {
@@ -88,11 +87,16 @@ int main(int argc, char **argv) {
       }
     });
 
-    rcon.set_receive_handler([&rcon](const boost::system::error_code &error, std::size_t nbytes) {
+    auto timeout = boost::posix_time::milliseconds(timeout_ms);
+
+    rcon.set_receive_handler([&rcon, &timeout](const boost::system::error_code &error, std::size_t nbytes) {
       std::cout << rcon.response_text() << std::endl;
+      rcon.receive(timeout);
     });
 
     rcon.send(command);
+    rcon.receive(timeout);
+
     io_service.run();
   }
   catch (boost::system::system_error &e) {

@@ -43,8 +43,7 @@ struct rcon_response_packet {
 
 class rcon_client {
 public:
-  rcon_client(boost::asio::io_service &io_service,
-              boost::posix_time::milliseconds timeout);
+  rcon_client(boost::asio::io_service &io_service);
   ~rcon_client();
 
   void connect(const std::string &host, const std::string &port,
@@ -52,6 +51,7 @@ public:
   void disconnect();
 
   void send(const std::string &command);
+  void receive(const boost::posix_time::milliseconds &timeout);
 
   template<typename TimeoutHandler>
   void set_timeout_handler(TimeoutHandler handler) {
@@ -66,8 +66,6 @@ public:
   std::string response_text() const;
 
 private:
-  void do_async_receive();
-
   void on_receive(const boost::system::error_code &error, std::size_t nbytes);
   void on_timeout(const boost::system::error_code &error);
 
@@ -77,7 +75,7 @@ private:
   boost::asio::ip::udp::socket socket_;
   std::string password_;
 
-  boost::asio::deadline_timer timeout_timer_;;
+  boost::asio::deadline_timer timeout_timer_;
   std::function<void (
     const boost::system::error_code &)
   > timeout_handler_;
