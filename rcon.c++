@@ -76,9 +76,7 @@ public:
   {
   }
 
-  void connect(const std::string &host, const std::string &port,
-               const std::string &password)
-  {
+  void connect(const std::string &host, const std::string &port) {
     boost::asio::ip::udp::endpoint endpoint;
 
     boost::asio::ip::udp::resolver resolver(io_service_);
@@ -217,7 +215,7 @@ int main(int argc, char **argv) {
     auto timeout = boost::posix_time::milliseconds(timeout_ms);
 
     rcon_client rcon(io_service, timeout);
-    rcon.connect(host, port, password);
+    rcon.connect(host, port);
 
     auto exit_timeout = [](const boost::system::error_code &error) {
       if (error) {
