@@ -91,7 +91,7 @@ public:
       endpoint = *iterator;
       socket_.connect(endpoint);
     }
-    
+
     do_async_receive();
   }
 
@@ -129,15 +129,6 @@ public:
     return std::string(response_.text, response_.text_length);
   }
 
-  void timeout(const boost::system::error_code &error) {
-    timeout_handler_(error);
-  }
-
-  template<typename TimeoutHandler>
-  void on_timeout(TimeoutHandler handler) {
-    timeout_handler_ = handler;
-  }
-
   void receive(const boost::system::error_code &error, std::size_t nbytes) {
     std::cout << output() << std::endl;
 
@@ -149,12 +140,23 @@ public:
   }
 
   void do_async_receive() {
-      auto timeout = std::bind(&rcon_client::timeout, this, std::placeholders::_1);
-      timeout_timer_.async_wait(timeout);
+    auto timeout = std::bind(&rcon_client::timeout, this, std::placeholders::_1);
+    timeout_timer_.async_wait(timeout);
 
-      auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
-                                                            std::placeholders::_2);
-      socket_.async_receive(recv_bufs_, handler);
+    auto handler = std::bind(&rcon_client::receive, this, std::placeholders::_1,
+                                                          std::placeholders::_2);
+    socket_.async_receive(recv_bufs_, handler);
+  }
+
+  void timeout(const boost::system::error_code &error) {
+    if (timeout_handler_) {
+      timeout_handler_(error);
+    }
+  }
+
+  template<typename TimeoutHandler>
+  void on_timeout(TimeoutHandler handler) {
+    timeout_handler_ = handler;
   }
 
 private:
@@ -219,6 +221,9 @@ int main(int argc, char **argv) {
     boost::asio::io_service io_service;
     auto timeout = boost::posix_time::milliseconds(timeout_ms);
 
+    rcon_client rcon(io_service, timeout);
+    rcon.connect(host, port, password);
+
     auto exit_timeout = [](const boost::system::error_code &error) {
       if (error) {
         std::cerr << boost::system::system_error(error).what() << std::endl;
@@ -228,9 +233,7 @@ int main(int argc, char **argv) {
       }
     };
 
-    rcon_client rcon(io_service, timeout);
     rcon.on_timeout(exit_timeout);
-    rcon.connect(host, port, password);
     rcon.send(password, command);
 
     io_service.run();
