@@ -34,7 +34,10 @@
 
 #include "packet.h++"
 
-const int max_rcon_response_text = 80;
+// It seems that the size of a UDP packet can't be determined in advance so we
+// just allocate a reasonably large buffer (in fact, most packets represent a
+// single line of text, except "echo" perhaps which is of arbitrary size).
+const std::size_t max_rcon_response_text = 1024;
 
 struct rcon_response_packet {
   packet_header header;
