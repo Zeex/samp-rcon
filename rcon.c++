@@ -38,7 +38,9 @@ int main(int argc, char **argv) {
   std::string host;
   std::string port;
   std::string password;
+  std::string command;
   long timeout_ms;
+  bool interactive;
 
   try {
     boost::program_options::options_description desc("Available options");
@@ -51,8 +53,12 @@ int main(int argc, char **argv) {
        "set server port")
       ("password,w", boost::program_options::value<std::string>(&password)->required(),
        "set RCON password")
+      ("command,c", boost::program_options::value<std::string>(&command),
+       "set command to be executed")
       ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(150),
        "set connection timeout (in milliseconds)")
+      ("interactive,i",
+       "run in interactive mode")
     ;
 
     boost::program_options::variables_map vars;
@@ -64,7 +70,15 @@ int main(int argc, char **argv) {
       std::exit(EXIT_SUCCESS);
     }
 
-    vars.notify();
+    boost::program_options::notify(vars);
+
+    interactive = vars.count("interactive");
+    if (!interactive) {
+      if (!vars.count("command")) {
+        std::cerr << "non-interactive mode requries a command" << std::endl;
+        std::exit(EXIT_FAILURE);
+      }
+    }
   }
   catch (boost::program_options::error &e) {
     std::cerr << e.what() << std::endl;
@@ -88,23 +102,29 @@ int main(int argc, char **argv) {
       }
     });
 
-    std::string command;
     auto timeout = boost::posix_time::milliseconds(timeout_ms);
 
-    rcon.set_receive_handler([&rcon, &password, &command, &timeout](const boost::system::error_code &error,
-                                                                    std::size_t nbytes) {
+    rcon.set_receive_handler([&rcon, &password, &command, &timeout, &interactive](
+      const boost::system::error_code &error, std::size_t nbytes)
+    {
       if (error == boost::asio::error::operation_aborted) {
-        std::cout << prompt_string;
-        std::getline(std::cin, command);
-        rcon.send(password, command);
+        if (interactive) {
+          std::cout << prompt_string;
+          std::getline(std::cin, command);
+          rcon.send(password, command);
+          rcon.receive(timeout);
+        }
       } else {
         std::cout << rcon.response_text() << std::endl;
+        rcon.receive(timeout);
       }
-      rcon.receive(timeout);
     });
 
-    std::cout << prompt_string;
-    std::getline(std::cin, command);
+    if (interactive) {
+      std::cout << prompt_string;
+      std::getline(std::cin, command);
+    }
+
     rcon.send(password, command);
     rcon.receive(timeout);
 
