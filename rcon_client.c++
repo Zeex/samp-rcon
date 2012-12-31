@@ -43,6 +43,7 @@ rcon_client::rcon_client(boost::asio::io_service &io_service, const boost::asio:
 }
 
 rcon_client::~rcon_client() {
+  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
   socket_.close();
 }
 
