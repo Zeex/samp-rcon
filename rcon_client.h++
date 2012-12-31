@@ -25,6 +25,7 @@
 #include <cstddef>
 #include <functional>
 #include <string>
+#include <memory>
 #include <vector>
 
 #include <boost/asio.hpp>
@@ -64,7 +65,7 @@ public:
 
   std::string response_text() const;
 
-private:
+private:  
   void on_receive(const boost::system::error_code &error, std::size_t nbytes);
   void on_timeout(const boost::system::error_code &error);
 
@@ -78,8 +79,7 @@ private:
     const boost::system::error_code &)
   > timeout_handler_;
 
-  rcon_response_packet response_;
-  std::vector<boost::asio::mutable_buffer> recv_bufs_;
+  std::shared_ptr<rcon_response_packet> response_;
   std::function<void (
     const boost::system::error_code &,
     std::size_t bytes_transferred)
