@@ -43,7 +43,7 @@ rcon_client::rcon_client(boost::asio::io_service &io_service, const boost::asio:
       boost::asio::buffer(&response_.header.port,      sizeof(response_.header.port)),
       boost::asio::buffer(&response_.header.opcode,    sizeof(response_.header.opcode)),
       boost::asio::buffer(&response_.text_length,      sizeof(response_.text_length)),
-      boost::asio::buffer(&response_.text,             sizeof(response_.text))
+      boost::asio::buffer(&response_.text,             sizeof(response_.text)),
     })
 {
   socket_.open(boost::asio::ip::udp::v4());
@@ -54,27 +54,26 @@ rcon_client::~rcon_client() {
 }
 
 void rcon_client::send(const std::string &password, const std::string &command) {
-  packet_header header;
+  packet_header header = {
+    PACKET_SIGNATURE_INITIALIZER,
+    static_cast<std::uint32_t>(endpoint_.address().to_v4().to_ulong()),
+    static_cast<std::uint16_t>(endpoint_.port()),
+    packet_opcode::rcon_command,
+  };
 
-  std::memcpy(&header.signature, &packet_signature, sizeof(header.signature));
-  header.address = static_cast<std::uint32_t>(endpoint_.address().to_v4().to_ulong());
-  header.port    = static_cast<std::uint16_t>(endpoint_.port());
-  header.opcode  = packet_opcode::rcon_command;
+  std::uint16_t password_length = password.length();
+  std::uint16_t command_length  = command.length();
 
   std::vector<boost::asio::const_buffer> send_bufs = {
     boost::asio::buffer(&header.signature, sizeof(header.signature)),
     boost::asio::buffer(&header.address,   sizeof(header.address)),
     boost::asio::buffer(&header.port,      sizeof(header.port)),
-    boost::asio::buffer(&header.opcode,    sizeof(header.opcode))
+    boost::asio::buffer(&header.opcode,    sizeof(header.opcode)),
+    boost::asio::buffer(&password_length,  sizeof(password_length)),
+    boost::asio::buffer(password.data(),   password.length()),
+    boost::asio::buffer(&command_length,   sizeof(command_length)),
+    boost::asio::buffer(command.data(),    command.length()),
   };
-
-  std::uint16_t password_length = password.length();
-  send_bufs.push_back(boost::asio::buffer(&password_length, sizeof(password_length)));
-  send_bufs.push_back(boost::asio::buffer(password.c_str(), password.length()));
-
-  std::uint16_t command_length = command.length();
-  send_bufs.push_back(boost::asio::buffer(&command_length, sizeof(command_length)));
-  send_bufs.push_back(boost::asio::buffer(command.c_str(), command.length()));
 
   socket_.send_to(send_bufs, endpoint_);
 }

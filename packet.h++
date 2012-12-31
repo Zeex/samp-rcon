@@ -30,7 +30,8 @@
 
 #include <cstdint>
 
-static const char packet_signature[] = {'S', 'A', 'M', 'P'};
+#define PACKET_SIGNATURE_INITIALIZER {'S', 'A', 'M', 'P'}
+static const char packet_signature[] = PACKET_SIGNATURE_INITIALIZER;
 
 enum class packet_opcode : char {
   info          = 'i',
