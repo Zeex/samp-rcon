@@ -7,7 +7,9 @@ Available options:
   -a [ --host ] arg (=localhost) set server IP address or hostname
   -p [ --port ] arg (=7777)      set server port
   -w [ --password ] arg          set RCON password
+  -c [ --command ] arg           set command to be executed
   -t [ --timeout ] arg (=150)    set connection timeout (in milliseconds)
+  -i [ --interactive ]           run in interactive mode
 
 To build this you will need Boost 1.49+ and CMake 2.8+
 
