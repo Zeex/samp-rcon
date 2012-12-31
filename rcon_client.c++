@@ -63,9 +63,9 @@ void rcon_client::send(const std::string &password, const std::string &command) 
     boost::asio::buffer(&header.port,      sizeof(header.port)),
     boost::asio::buffer(&header.opcode,    sizeof(header.opcode)),
     boost::asio::buffer(&password_length,  sizeof(password_length)),
-    boost::asio::buffer(password.data(),   password.length()),
+    boost::asio::buffer(password),
     boost::asio::buffer(&command_length,   sizeof(command_length)),
-    boost::asio::buffer(command.data(),    command.length()),
+    boost::asio::buffer(command),
   };
 
   socket_.send_to(buffers, endpoint_);
