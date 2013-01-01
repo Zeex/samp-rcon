@@ -32,7 +32,8 @@
 
 #include "rcon_client.h++"
 
-rcon_client::rcon_client(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &endpoint)
+rcon_client::rcon_client(boost::asio::io_service &io_service,
+                         const boost::asio::ip::udp::endpoint &endpoint)
   : io_service_(io_service),
     endpoint_(endpoint),
     socket_(io_service),
@@ -46,7 +47,9 @@ rcon_client::~rcon_client() {
   socket_.close();
 }
 
-void rcon_client::send(const std::string &password, const std::string &command) {
+void rcon_client::send(const std::string &password,
+                       const std::string &command)
+{
   packet_header header = {
     PACKET_SIGNATURE_INITIALIZER,
     static_cast<std::uint32_t>(endpoint_.address().to_v4().to_ulong()),
@@ -57,15 +60,17 @@ void rcon_client::send(const std::string &password, const std::string &command) 
   std::uint16_t password_length = password.length();
   std::uint16_t command_length  = command.length();
 
+  using boost::asio::buffer;
+
   std::vector<boost::asio::const_buffer> buffers = {
-    boost::asio::buffer(&header.signature, sizeof(header.signature)),
-    boost::asio::buffer(&header.address,   sizeof(header.address)),
-    boost::asio::buffer(&header.port,      sizeof(header.port)),
-    boost::asio::buffer(&header.opcode,    sizeof(header.opcode)),
-    boost::asio::buffer(&password_length,  sizeof(password_length)),
-    boost::asio::buffer(password),
-    boost::asio::buffer(&command_length,   sizeof(command_length)),
-    boost::asio::buffer(command),
+    buffer(&header.signature, sizeof(header.signature)),
+    buffer(&header.address,   sizeof(header.address)),
+    buffer(&header.port,      sizeof(header.port)),
+    buffer(&header.opcode,    sizeof(header.opcode)),
+    buffer(&password_length,  sizeof(password_length)),
+    buffer(password),
+    buffer(&command_length,   sizeof(command_length)),
+    buffer(command),
   };
 
   socket_.send_to(buffers, endpoint_);
@@ -76,18 +81,21 @@ void rcon_client::receive() {
 }
 
 void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
-  using namespace std::placeholders;
+  using boost::asio::buffer;
 
   std::vector<boost::asio::mutable_buffer> buffers = {
-    boost::asio::buffer(&response_->header.signature, sizeof(response_->header.signature)),
-    boost::asio::buffer(&response_->header.address,   sizeof(response_->header.address)),
-    boost::asio::buffer(&response_->header.port,      sizeof(response_->header.port)),
-    boost::asio::buffer(&response_->header.opcode,    sizeof(response_->header.opcode)),
-    boost::asio::buffer(&response_->text_length,      sizeof(response_->text_length)),
-    boost::asio::buffer(&response_->text,             sizeof(response_->text)),
+    buffer(&response_->header.signature, sizeof(response_->header.signature)),
+    buffer(&response_->header.address,   sizeof(response_->header.address)),
+    buffer(&response_->header.port,      sizeof(response_->header.port)),
+    buffer(&response_->header.opcode,    sizeof(response_->header.opcode)),
+    buffer(&response_->text_length,      sizeof(response_->text_length)),
+    buffer(&response_->text,             sizeof(response_->text)),
   };
 
-  auto receive_handler = std::bind(&rcon_client::on_receive, this,_1, _2);
+  using std::placeholders::_1;
+  using std::placeholders::_2;
+
+  auto receive_handler = std::bind(&rcon_client::on_receive, this, _1, _2);
   socket_.async_receive_from(buffers, endpoint_, receive_handler);
 
   if (timeout.total_milliseconds() > 0) {
@@ -97,7 +105,8 @@ void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
   }
 }
 
-void rcon_client::on_receive(const boost::system::error_code &error, std::size_t nbytes) {
+void rcon_client::on_receive(const boost::system::error_code &error,
+                             std::size_t nbytes) {
   if (receive_handler_) {
     receive_handler_(error, nbytes);
   }

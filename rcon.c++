@@ -47,26 +47,33 @@ int main(int argc, char **argv) {
     desc.add_options()
       ("help,h",
        "show this message and exit")
-      ("host,a", boost::program_options::value<std::string>(&host)->default_value("localhost"),
+      ("host,a",
+       boost::program_options::value(&host)->default_value("localhost"),
        "set server IP address or hostname")
-      ("port,p", boost::program_options::value<std::string>(&port)->default_value("7777"),
+      ("port,p",
+       boost::program_options::value(&port)->default_value("7777"),
        "set server port")
-      ("password,w", boost::program_options::value<std::string>(&password)->required(),
+      ("password,w",
+        boost::program_options::value(&password)->required(),
        "set RCON password")
-      ("command,c", boost::program_options::value<std::string>(&command),
+      ("command,c",
+        boost::program_options::value(&command),
        "set command to be executed")
-      ("timeout,t", boost::program_options::value<long>(&timeout_ms)->default_value(150),
+      ("timeout,t",
+        boost::program_options::value(&timeout_ms)->default_value(150),
        "set connection timeout (in milliseconds)")
       ("interactive,i",
        "run in interactive mode")
     ;
 
+    auto opts = boost::program_options::parse_command_line(argc, argv, desc);
+
     boost::program_options::variables_map vars;
-    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vars);
+    boost::program_options::store(opts, vars);
 
     if (vars.count("help")) {
-      std::cout << "Usage: " << boost::filesystem::basename(argv[0]) << " [options]\n\n"
-                << desc << std::endl;
+      auto program_name = boost::filesystem::basename(argv[0]);
+      std::cout << "Usage: " << program_name << " [options]\n\n" << desc << std::endl;
       std::exit(EXIT_SUCCESS);
     }
 
@@ -94,17 +101,17 @@ int main(int argc, char **argv) {
 
     rcon_client rcon(io_service, endpoint);
 
-    rcon.set_timeout_handler([&rcon](const boost::system::error_code &error) {
+    auto timeout = boost::posix_time::milliseconds(timeout_ms);
+    auto timeout_handler = [&rcon](const boost::system::error_code &error) {
       if (error) {
         std::cerr << boost::system::system_error(error).what() << std::endl;
       } else {
         rcon.cancel();
       }
-    });
+    };
+    rcon.set_timeout_handler(timeout_handler);
 
-    auto timeout = boost::posix_time::milliseconds(timeout_ms);
-
-    rcon.set_receive_handler([&rcon, &password, &command, &timeout, &interactive](
+    auto receive_handler = [&rcon, &password, &command, &timeout, &interactive](
       const boost::system::error_code &error, std::size_t nbytes)
     {
       if (error == boost::asio::error::operation_aborted) {
@@ -118,7 +125,8 @@ int main(int argc, char **argv) {
         std::cout << rcon.response_text() << std::endl;
         rcon.receive(timeout);
       }
-    });
+    };
+    rcon.set_receive_handler(receive_handler);
 
     if (interactive) {
       std::cout << prompt_string;

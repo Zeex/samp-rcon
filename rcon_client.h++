@@ -46,8 +46,9 @@ struct rcon_response_packet {
 };
 
 class rcon_client {
-public:
-  rcon_client(boost::asio::io_service &io_service, const boost::asio::ip::udp::endpoint &endpoint);
+ public:
+  rcon_client(boost::asio::io_service &io_service,
+              const boost::asio::ip::udp::endpoint &endpoint);
   ~rcon_client();
 
   void send(const std::string &password, const std::string &command);
@@ -68,11 +69,11 @@ public:
 
   std::string response_text() const;
 
-private:  
+ private:
   void on_receive(const boost::system::error_code &error, std::size_t nbytes);
   void on_timeout(const boost::system::error_code &error);
 
-private:
+ private:
   boost::asio::io_service &io_service_;
   boost::asio::ip::udp::endpoint endpoint_;
   boost::asio::ip::udp::socket socket_;
