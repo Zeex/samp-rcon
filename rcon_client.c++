@@ -38,7 +38,7 @@ rcon_client::rcon_client(boost::asio::io_service &io_service,
     endpoint_(endpoint),
     socket_(io_service),
     timeout_timer_(io_service),
-    response_(new rcon_response_packet)
+    response_(new response_packet)
 {
   socket_.open(boost::asio::ip::udp::v4());
 }

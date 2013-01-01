@@ -34,19 +34,16 @@
 
 #include "packet.h++"
 
-// It seems that the size of a UDP packet can't be determined in advance so we
-// just allocate a reasonably large buffer (in fact, most packets represent a
-// single line of text, except "echo" perhaps which is of arbitrary size).
-const std::size_t max_rcon_response_text = 1024;
-
-struct rcon_response_packet {
-  packet_header header;
-  std::uint16_t text_length;
-  char          text[max_rcon_response_text];
-};
-
 class rcon_client {
  public:
+  static const int max_response_text = 1024;
+
+  struct response_packet {
+    packet_header header;
+    std::uint16_t text_length;
+    char          text[max_response_text];
+  };
+
   rcon_client(boost::asio::io_service &io_service,
               const boost::asio::ip::udp::endpoint &endpoint);
   ~rcon_client();
@@ -83,7 +80,7 @@ class rcon_client {
     const boost::system::error_code &)
   > timeout_handler_;
 
-  std::shared_ptr<rcon_response_packet> response_;
+  std::shared_ptr<response_packet> response_;
   std::function<void (
     const boost::system::error_code &,
     std::size_t bytes_transferred)
