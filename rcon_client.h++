@@ -23,9 +23,10 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <cstddef>
+#include <cstdint>
 #include <functional>
-#include <string>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <boost/asio.hpp>

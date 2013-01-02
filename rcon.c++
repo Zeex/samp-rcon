@@ -27,7 +27,6 @@
 
 #include <boost/asio.hpp>
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
 #include <boost/program_options.hpp>
 
 #include "rcon_client.h++"

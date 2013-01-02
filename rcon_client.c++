@@ -22,14 +22,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <cassert>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <vector>
-
-#include <boost/asio.hpp>
-
 #include "rcon_client.h++"
 
 rcon_client::rcon_client(boost::asio::io_service &io_service,
