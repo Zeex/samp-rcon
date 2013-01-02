@@ -82,7 +82,8 @@ int main(int argc, char **argv) {
 
     if (!interactive) {
       if (!variables.count("command")) {
-        throw boost::program_options::error("non-interactive mode requries a command");
+        std::cerr << "non-interactive mode requries a command" << std::endl;
+        std::exit(EXIT_FAILURE);
       }
     }
   }
