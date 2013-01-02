@@ -29,8 +29,7 @@ rcon_client::rcon_client(boost::asio::io_service &io_service,
   : io_service_(io_service),
     endpoint_(endpoint),
     socket_(io_service),
-    timeout_timer_(io_service),
-    response_(new response_packet)
+    timeout_timer_(io_service)
 {
   socket_.open(boost::asio::ip::udp::v4());
 }
@@ -76,12 +75,12 @@ void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
   using boost::asio::buffer;
 
   std::vector<boost::asio::mutable_buffer> buffers = {
-    buffer(&response_->header.signature, sizeof(response_->header.signature)),
-    buffer(&response_->header.address,   sizeof(response_->header.address)),
-    buffer(&response_->header.port,      sizeof(response_->header.port)),
-    buffer(&response_->header.opcode,    sizeof(response_->header.opcode)),
-    buffer(&response_->text_length,      sizeof(response_->text_length)),
-    buffer(&response_->text,             sizeof(response_->text)),
+    buffer(&response_.header.signature, sizeof(response_.header.signature)),
+    buffer(&response_.header.address,   sizeof(response_.header.address)),
+    buffer(&response_.header.port,      sizeof(response_.header.port)),
+    buffer(&response_.header.opcode,    sizeof(response_.header.opcode)),
+    buffer(&response_.text_length,      sizeof(response_.text_length)),
+    buffer(&response_.text,             sizeof(response_.text)),
   };
 
   using std::placeholders::_1;
@@ -118,5 +117,5 @@ void rcon_client::cancel() {
 }
 
 std::string rcon_client::response_text() const {
-  return std::string(response_->text, response_->text_length);
+  return std::string(response_.text, response_.text_length);
 }

@@ -25,7 +25,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
-#include <memory>
 #include <string>
 #include <vector>
 
@@ -81,7 +80,7 @@ class rcon_client {
     const boost::system::error_code &)
   > timeout_handler_;
 
-  std::shared_ptr<response_packet> response_;
+  response_packet response_;
   std::function<void (
     const boost::system::error_code &,
     std::size_t bytes_transferred)
