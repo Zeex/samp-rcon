@@ -62,25 +62,26 @@ int main(int argc, char **argv) {
         boost::program_options::value(&timeout_ms)->default_value(150),
        "set connection timeout (in milliseconds)")
       ("interactive,i",
+        boost::program_options::bool_switch(&interactive),
        "run in interactive mode")
     ;
 
-    auto opts = boost::program_options::parse_command_line(argc, argv, desc);
+    auto parser = boost::program_options::command_line_parser(argc, argv);
+    auto parsed_options = parser.options(desc).run();
 
-    boost::program_options::variables_map vars;
-    boost::program_options::store(opts, vars);
+    boost::program_options::variables_map variables;
+    boost::program_options::store(parsed_options, variables);
 
-    if (vars.count("help")) {
+    if (variables.count("help")) {
       auto program_name = boost::filesystem::basename(argv[0]);
       std::cout << "Usage: " << program_name << " [options]\n\n" << desc << std::endl;
       std::exit(EXIT_SUCCESS);
     }
 
-    boost::program_options::notify(vars);
+    boost::program_options::notify(variables);
 
-    interactive = vars.count("interactive");
     if (!interactive) {
-      if (!vars.count("command")) {
+      if (!variables.count("command")) {
         throw boost::program_options::error("non-interactive mode requries a command");
       }
     }
