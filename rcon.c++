@@ -115,7 +115,10 @@ int main(int argc, char **argv) {
       if (error == boost::asio::error::operation_aborted) {
         if (interactive) {
           std::cout << prompt_string;
-          std::getline(std::cin, command);
+          if (!std::getline(std::cin, command)) {
+            std::cout << std::endl;
+            std::exit(EXIT_SUCCESS);
+          }
           rcon.send(password, command);
           rcon.receive(timeout);
         }
@@ -128,7 +131,10 @@ int main(int argc, char **argv) {
 
     if (interactive) {
       std::cout << prompt_string;
-      std::getline(std::cin, command);
+      if (!std::getline(std::cin, command)) {
+        std::cout << std::endl;
+        std::exit(EXIT_SUCCESS);
+      }
     }
 
     rcon.send(password, command);
