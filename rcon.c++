@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     desc.add_options()
       ("help,h",
        "show this message and exit")
-      ("host,a",
+      ("host,s",
        boost::program_options::value(&host)->default_value("localhost"),
        "set server IP address or hostname")
       ("port,p",
