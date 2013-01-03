@@ -31,7 +31,7 @@
 
 #include "rcon_client.h++"
 
-static const char prompt_string[] = "rcon: ";
+static const char prompt_string[] = ">>> ";
 
 int main(int argc, char **argv) {
   std::string host;
@@ -100,6 +100,12 @@ int main(int argc, char **argv) {
     boost::asio::ip::udp::endpoint endpoint = *resolver.resolve(query);
 
     rcon_client rcon(io_service, endpoint);
+
+    if (interactive) {
+      std::cout << "Remote console to " << endpoint << "\n"
+                << "Type \"cmdlist\" for the list of available commands\n"
+                << std::flush;
+    }
 
     auto timeout = boost::posix_time::milliseconds(timeout_ms);
     auto timeout_handler = [&rcon](const boost::system::error_code &error) {
