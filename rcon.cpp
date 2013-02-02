@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
       ("help,h",
        "show this message and exit")
       ("host,s",
-       boost::program_options::value(&host)->default_value("localhost"),
+       boost::program_options::value(&host)->default_value("127.0.0.1"),
        "set server IP address or hostname")
       ("port,p",
        boost::program_options::value(&port)->default_value("7777"),
