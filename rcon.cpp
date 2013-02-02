@@ -29,7 +29,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
-#include "rcon_client.h++"
+#include "rcon_client.hpp"
 
 static const char prompt_string[] = ">>> ";
 
@@ -109,7 +109,7 @@ int main(int argc, char **argv) {
 
     auto timeout = boost::posix_time::milliseconds(timeout_ms);
     auto timeout_handler = [&rcon](const boost::system::error_code &error) {
-      if (error) {
+    if (error) {
         std::cerr << boost::system::system_error(error).what() << std::endl;
       } else {
         rcon.cancel();

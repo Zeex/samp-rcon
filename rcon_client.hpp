@@ -32,7 +32,7 @@
 #include <boost/system/error_code.hpp>
 #include <boost/date_time.hpp>
 
-#include "packet.h++"
+#include "packet.hpp"
 
 class rcon_client {
  public:

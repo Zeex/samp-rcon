@@ -22,7 +22,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include "rcon_client.h++"
+#include "rcon_client.hpp"
 
 rcon_client::rcon_client(boost::asio::io_service &io_service,
                          const boost::asio::ip::udp::endpoint &endpoint)
