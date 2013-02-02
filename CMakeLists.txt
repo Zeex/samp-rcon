@@ -2,8 +2,10 @@ cmake_minimum_required(VERSION 2.8)
 project(rcon)
 
 find_package(Boost 1.49 REQUIRED COMPONENTS
+  date_time
   filesystem
   program_options
+  regex
   system
 )
 
