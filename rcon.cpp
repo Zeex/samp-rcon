@@ -131,7 +131,9 @@ int main(int argc, char **argv) {
           rcon.receive(timeout);
         }
       } else {
-        std::cout << rcon.response_text() << std::endl;
+        if (!error) {
+          std::cout << rcon.response_text() << std::endl;
+        }
         rcon.receive(timeout);
       }
     };
