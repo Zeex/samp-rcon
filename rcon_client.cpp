@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Zeex
+// Copyright (c) 2012-2013 Zeex
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -41,27 +41,27 @@ rcon_client::~rcon_client() {
 void rcon_client::send(const std::string &password,
                        const std::string &command)
 {
-  packet_header header = {
-    PACKET_SIGNATURE_INITIALIZER,
+  pod_packet_header header = packet_header::make(
     static_cast<std::uint32_t>(endpoint_.address().to_v4().to_ulong()),
     static_cast<std::uint16_t>(endpoint_.port()),
-    packet_opcode::rcon_command,
-  };
+    packet_opcode::rcon_command
+  );
 
   std::uint16_t password_length = password.length();
   std::uint16_t command_length  = command.length();
 
   using boost::asio::buffer;
 
-  std::vector<boost::asio::const_buffer> buffers;
-  buffers.push_back(buffer(&header.signature, sizeof(header.signature)));
-  buffers.push_back(buffer(&header.address,   sizeof(header.address)));
-  buffers.push_back(buffer(&header.port,      sizeof(header.port)));
-  buffers.push_back(buffer(&header.opcode,    sizeof(header.opcode)));
-  buffers.push_back(buffer(&password_length,  sizeof(password_length)));
-  buffers.push_back(buffer(password));
-  buffers.push_back(buffer(&command_length,   sizeof(command_length)));
-  buffers.push_back(buffer(command));
+  std::vector<boost::asio::const_buffer> buffers = {
+    buffer(&header.signature, sizeof(header.signature)),
+    buffer(&header.address,   sizeof(header.address)),
+    buffer(&header.port,      sizeof(header.port)),
+    buffer(&header.opcode,    sizeof(header.opcode)),
+    buffer(&password_length,  sizeof(password_length)),
+    buffer(password),
+    buffer(&command_length,   sizeof(command_length)),
+    buffer(command)
+  };
 
   socket_.send_to(buffers, endpoint_);
 }
@@ -73,13 +73,14 @@ void rcon_client::receive() {
 void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
   using boost::asio::buffer;
 
-  std::vector<boost::asio::mutable_buffer> buffers;
-  buffers.push_back(buffer(&response_.header.signature, sizeof(response_.header.signature)));
-  buffers.push_back(buffer(&response_.header.address,   sizeof(response_.header.address)));
-  buffers.push_back(buffer(&response_.header.port,      sizeof(response_.header.port)));
-  buffers.push_back(buffer(&response_.header.opcode,    sizeof(response_.header.opcode)));
-  buffers.push_back(buffer(&response_.text_length,      sizeof(response_.text_length)));
-  buffers.push_back(buffer(&response_.text,             sizeof(response_.text)));
+  std::vector<boost::asio::mutable_buffer> buffers = {
+    buffer(&response_.header.signature, sizeof(response_.header.signature)),
+    buffer(&response_.header.address,   sizeof(response_.header.address)),
+    buffer(&response_.header.port,      sizeof(response_.header.port)),
+    buffer(&response_.header.opcode,    sizeof(response_.header.opcode)),
+    buffer(&response_.text_length,      sizeof(response_.text_length)),
+    buffer(&response_.text,             sizeof(response_.text))
+  };
 
   using std::placeholders::_1;
   using std::placeholders::_2;

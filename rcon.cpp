@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Zeex
+// Copyright (c) 2012-2013 Zeex
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,7 +22,6 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#include <cstdlib>
 #include <iostream>
 
 #include <boost/asio.hpp>
@@ -75,7 +74,7 @@ int main(int argc, char **argv) {
     if (variables.count("help")) {
       auto program_name = boost::filesystem::basename(argv[0]);
       std::cout << "Usage: " << program_name << " [options]\n\n" << desc << std::endl;
-      std::exit(EXIT_SUCCESS);
+      return 0;
     }
 
     boost::program_options::notify(variables);
@@ -83,13 +82,13 @@ int main(int argc, char **argv) {
     if (!interactive) {
       if (!variables.count("command")) {
         std::cerr << "non-interactive mode requries a command" << std::endl;
-        std::exit(EXIT_FAILURE);
+        return 1;
       }
     }
   }
   catch (boost::program_options::error &e) {
     std::cerr << e.what() << std::endl;
-    std::exit(EXIT_FAILURE);
+    return 1;
   }
 
   try {
@@ -125,7 +124,7 @@ int main(int argc, char **argv) {
           std::cout << prompt_string;
           if (!std::getline(std::cin, command)) {
             std::cout << std::endl;
-            std::exit(EXIT_SUCCESS);
+            return 0;
           }
           rcon.send(password, command);
           rcon.receive(timeout);
@@ -143,7 +142,7 @@ int main(int argc, char **argv) {
       std::cout << prompt_string;
       if (!std::getline(std::cin, command)) {
         std::cout << std::endl;
-        std::exit(EXIT_SUCCESS);
+        return 0;
       }
     }
 
@@ -154,8 +153,8 @@ int main(int argc, char **argv) {
   }
   catch (boost::system::system_error &e) {
     std::cerr << e.what() << std::endl;
-    std::exit(EXIT_FAILURE);
+    return 1;
   }
 
-  std::exit(EXIT_SUCCESS);
+  return 0;
 }

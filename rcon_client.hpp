@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Zeex
+// Copyright (c) 2012-2013 Zeex
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -39,9 +39,9 @@ class rcon_client {
   static const int max_response_text = 1024;
 
   struct response_packet {
-    packet_header header;
-    std::uint16_t text_length;
-    char          text[max_response_text];
+    pod_packet_header header;
+    std::uint16_t     text_length;
+    char              text[max_response_text];
   };
 
   rcon_client(boost::asio::io_service &io_service,

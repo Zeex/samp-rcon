@@ -12,6 +12,7 @@ find_package(Boost 1.49 REQUIRED COMPONENTS
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(rcon
+  packet.cpp
   packet.hpp
   rcon.cpp
   rcon_client.cpp

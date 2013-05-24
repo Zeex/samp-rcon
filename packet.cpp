@@ -1,4 +1,4 @@
-// Copyright (c) 2012 Zeex
+// Copyright (c) 2012-2013 Zeex
 // All rights reserved.
 //
 // Redistribution and use in source and binary forms, with or without
@@ -22,59 +22,26 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef PACKET_HPP
-#define PACKET_HPP
+#include <algorithm>
 
-// See this page for more details:
-// http://wiki.sa-mp.com/wiki/Query_Mechanism
+#include "packet.hpp"
 
-#include <cstdint>
+packet_header::packet_header(pod_packet_header pod)
+  : pod_(pod)
+{
+}
 
-static const char packet_signature[] = {'S', 'A', 'M', 'P'};
+packet_header::packet_header(std::uint32_t address, std::uint16_t port,
+                             packet_opcode opcode)
+  : pod_(make(address, port, opcode))
+{
+}
 
-enum class packet_opcode : char {
-  info          = 'i',
-  rules         = 'r',
-  client_list   = 'c',
-  detailed_info = 'd',
-  rcon_command  = 'x',
-  ping          = 'p'
-};
-
-struct pod_packet_header {
-  char          signature[4];
-  std::uint32_t address;
-  std::uint16_t port;
-  packet_opcode opcode;
-};
-
-class packet_header {
- public:
-  packet_header(pod_packet_header pod);
-  packet_header(std::uint32_t address, std::uint16_t port,
-                packet_opcode opcode);
-
-  pod_packet_header &pod() {
-    return pod_;
-  }
-
-  std::uint32_t address() const {
-    return pod_.address;
-  }
-
-  std::uint16_t port() const {
-    return pod_.port;
-  }
-
-  packet_opcode opcode() const {
-    return pod_.opcode;
-  }
-
-  static pod_packet_header make(std::uint32_t address, std::uint16_t port,
-                                packet_opcode opcode);
-
- private:
-  pod_packet_header pod_;
-};
-
-#endif // !PACKET_HPP
+pod_packet_header packet_header::make(std::uint32_t address, std::uint16_t port,
+                                      packet_opcode opcode) {
+  pod_packet_header pod = {{0}, address, port, opcode};
+  std::copy(packet_signature,
+            packet_signature + sizeof(packet_signature),
+            pod.signature);
+  return pod;
+}
