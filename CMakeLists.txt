@@ -25,4 +25,7 @@ if(CMAKE_COMPILER_IS_GNUCXX)
   endif()
 endif()
 
+if(WIN32)
+  target_link_libraries(rcon ws2_32)
+endif()
 target_link_libraries(rcon ${Boost_LIBRARIES})
