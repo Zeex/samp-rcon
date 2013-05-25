@@ -22,8 +22,7 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#ifndef PACKET_HPP
-#define PACKET_HPP
+#pragma once
 
 // See this page for more details:
 // http://wiki.sa-mp.com/wiki/Query_Mechanism
@@ -78,5 +77,3 @@ class packet_header {
  private:
   pod_packet_header pod_;
 };
-
-#endif // !PACKET_HPP
