@@ -50,7 +50,7 @@ struct pod_packet_header {
 
 class packet_header {
  public:
-  packet_header(pod_packet_header pod);
+  packet_header(pod_packet_header header);
   packet_header(std::uint32_t address, std::uint16_t port,
                 packet_opcode opcode);
 
@@ -72,6 +72,8 @@ class packet_header {
 
   static pod_packet_header make(std::uint32_t address, std::uint16_t port,
                                 packet_opcode opcode);
+
+  static bool is_valid(const pod_packet_header &header);
 
  private:
   pod_packet_header pod_;

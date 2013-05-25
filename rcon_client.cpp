@@ -97,8 +97,10 @@ void rcon_client::receive(const boost::posix_time::milliseconds &timeout) {
 
 void rcon_client::on_receive(const boost::system::error_code &error,
                              std::size_t nbytes) {
-  if (receive_handler_) {
-    receive_handler_(error, nbytes);
+  if (packet_header::is_valid(response_.header) || error) {
+    if (receive_handler_) {
+      receive_handler_(error, nbytes);
+    }
   }
 }
 

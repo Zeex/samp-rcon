@@ -23,11 +23,12 @@
 // POSSIBILITY OF SUCH DAMAGE.
 
 #include <algorithm>
+#include <cstring>
 
 #include "packet.hpp"
 
-packet_header::packet_header(pod_packet_header pod)
-  : pod_(pod)
+packet_header::packet_header(pod_packet_header header)
+  : pod_(header)
 {
 }
 
@@ -44,4 +45,9 @@ pod_packet_header packet_header::make(std::uint32_t address, std::uint16_t port,
             packet_signature + sizeof(packet_signature),
             pod.signature);
   return pod;
+}
+
+bool packet_header::is_valid(const pod_packet_header &header) {
+  return std::memcmp(header.signature, packet_signature,
+                     sizeof(packet_signature)) == 0;
 }
