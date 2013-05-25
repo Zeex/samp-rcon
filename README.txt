@@ -1,5 +1,3 @@
-I just needed an RCON client for Linux once, so here it is...
-
 Usage: rcon [options]
 
 Available options:
@@ -10,11 +8,3 @@ Available options:
   -c [ --command ] arg           set command to be executed
   -t [ --timeout ] arg (=150)    set connection timeout (in milliseconds)
   -i [ --interactive ]           run in interactive mode
-
-To build this you will need Boost 1.49+ and CMake 2.8+
-
-  sudo apt-get install libboost-dev-all
-  sudo apt-get install cmake
-  cd /path/to/samp-rcon/
-  cmake .
-  make
