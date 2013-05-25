@@ -40,10 +40,10 @@ class rcon_client {
  public:
   static const int max_response_text = 1024;
 
-  struct response_packet {
-    pod_packet_header header;
-    std::uint16_t     text_length;
-    char              text[max_response_text];
+  struct response_packet_data {
+    packet_header_data header;
+    std::uint16_t      text_length;
+    char               text[max_response_text];
   };
 
   rcon_client(boost::asio::io_service &io_service,
@@ -82,7 +82,7 @@ class rcon_client {
     const boost::system::error_code &)
   > timeout_handler_;
 
-  response_packet response_;
+  response_packet_data response_;
   std::function<void (
     const boost::system::error_code &,
     std::size_t bytes_transferred)

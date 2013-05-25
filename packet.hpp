@@ -40,7 +40,7 @@ enum class packet_opcode : char {
   ping          = 'p'
 };
 
-struct pod_packet_header {
+struct packet_header_data {
   char          signature[4];
   std::uint32_t address;
   std::uint16_t port;
@@ -49,31 +49,30 @@ struct pod_packet_header {
 
 class packet_header {
  public:
-  packet_header(pod_packet_header header);
-  packet_header(std::uint32_t address, std::uint16_t port,
-                packet_opcode opcode);
+  packet_header(packet_header_data header);
+  packet_header(std::uint32_t address, std::uint16_t port, packet_opcode opcode);
 
-  pod_packet_header &pod() {
-    return pod_;
+  packet_header_data &data() {
+    return data_;
   }
 
   std::uint32_t address() const {
-    return pod_.address;
+    return data_.address;
   }
 
   std::uint16_t port() const {
-    return pod_.port;
+    return data_.port;
   }
 
   packet_opcode opcode() const {
-    return pod_.opcode;
+    return data_.opcode;
   }
 
-  static pod_packet_header make(std::uint32_t address, std::uint16_t port,
-                                packet_opcode opcode);
+  static packet_header_data make(std::uint32_t address, std::uint16_t port,
+                                 packet_opcode opcode);
 
-  static bool is_valid(const pod_packet_header &header);
+  static bool is_valid(const packet_header_data &header);
 
  private:
-  pod_packet_header pod_;
+  packet_header_data data_;
 };

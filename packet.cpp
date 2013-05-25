@@ -27,27 +27,27 @@
 
 #include "packet.hpp"
 
-packet_header::packet_header(pod_packet_header header)
-  : pod_(header)
+packet_header::packet_header(packet_header_data header)
+  : data_(header)
 {
 }
 
 packet_header::packet_header(std::uint32_t address, std::uint16_t port,
                              packet_opcode opcode)
-  : pod_(make(address, port, opcode))
+  : data_(make(address, port, opcode))
 {
 }
 
-pod_packet_header packet_header::make(std::uint32_t address, std::uint16_t port,
-                                      packet_opcode opcode) {
-  pod_packet_header pod = {{0}, address, port, opcode};
+packet_header_data packet_header::make(std::uint32_t address, std::uint16_t port,
+                                       packet_opcode opcode) {
+  packet_header_data pod = {{0}, address, port, opcode};
   std::copy(packet_signature,
             packet_signature + sizeof(packet_signature),
             pod.signature);
   return pod;
 }
 
-bool packet_header::is_valid(const pod_packet_header &header) {
+bool packet_header::is_valid(const packet_header_data &header) {
   return std::memcmp(header.signature, packet_signature,
                      sizeof(packet_signature)) == 0;
 }

@@ -41,7 +41,7 @@ rcon_client::~rcon_client() {
 void rcon_client::send(const std::string &password,
                        const std::string &command)
 {
-  pod_packet_header header = packet_header::make(
+  packet_header_data header = packet_header::make(
     static_cast<std::uint32_t>(endpoint_.address().to_v4().to_ulong()),
     static_cast<std::uint16_t>(endpoint_.port()),
     packet_opcode::rcon_command
