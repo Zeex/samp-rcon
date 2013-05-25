@@ -32,6 +32,10 @@
 
 static const char prompt_string[] = ">>> ";
 
+static void print_error(const boost::system::system_error &error) {
+  std::cout << "Error: " << error.what() << std::endl;
+}
+
 int main(int argc, char **argv) {
   std::string host;
   std::string port;
@@ -132,6 +136,8 @@ int main(int argc, char **argv) {
       } else {
         if (!error) {
           std::cout << rcon.response_text() << std::endl;
+        } else {
+          print_error(error);
         }
         rcon.receive(timeout);
       }
@@ -152,7 +158,7 @@ int main(int argc, char **argv) {
     io_service.run();
   }
   catch (boost::system::system_error &e) {
-    std::cerr << e.what() << std::endl;
+    print_error(e);
     return 1;
   }
 
