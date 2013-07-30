@@ -22,7 +22,8 @@
 // ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 // POSSIBILITY OF SUCH DAMAGE.
 
-#pragma once
+#ifndef SAMPQUERY_QUERY_HPP
+#define SAMPQUERY_QUERY_HPP
 
 #include <cstddef>
 #include <cstdint>
@@ -36,35 +37,44 @@
 
 #include "packet.hpp"
 
-class rcon_client {
+namespace sampquery {
+
+typedef packet_opcode query_type;
+
+class query {
  public:
   static const int max_response_text = 1024;
 
-  struct response_packet_data {
-    packet_header_data header;
-    std::uint16_t      text_length;
-    char               text[max_response_text];
-  };
+  query(query_type type,
+        boost::asio::io_service &io_service);
+  ~query();
 
-  rcon_client(boost::asio::io_service &io_service,
-              const boost::asio::ip::udp::endpoint &endpoint);
-  ~rcon_client();
+  void set_endpoint(const boost::asio::ip::udp::endpoint endpoint) {
+    endpoint_ = endpoint;
+  }
 
-  void send(const std::string &password, const std::string &command);
+  typedef std::function<void(
+    const boost::system::error_code &error_code)
+  > timeout_handler;
+
+  void set_timeout_handler(timeout_handler handler) {
+    timeout_handler_ = handler;
+  }
+
+  typedef std::function<void(
+    const boost::system::error_code &error_code, std::size_t nbytes)
+  > receive_handler;
+
+  void set_receive_handler(receive_handler handler) {
+    receive_handler_ = handler;
+  }
+
+  void send(std::vector<boost::asio::const_buffer> &buffers);
+
   void receive();
   void receive(const boost::posix_time::milliseconds &timeout);
 
   void cancel();
-
-  template<typename TimeoutHandler>
-  void set_timeout_handler(TimeoutHandler handler) {
-    timeout_handler_ = handler;
-  }
-
-  template<typename ReceiveHandler>
-  void set_receive_handler(ReceiveHandler handler) {
-    receive_handler_ = handler;
-  }
 
   std::string response_text() const;
 
@@ -73,18 +83,24 @@ class rcon_client {
   void on_timeout(const boost::system::error_code &error);
 
  private:
+  query_type type_;
   boost::asio::io_service &io_service_;
   boost::asio::ip::udp::endpoint endpoint_;
   boost::asio::ip::udp::socket socket_;
 
+  timeout_handler timeout_handler_;
   boost::asio::deadline_timer timeout_timer_;
-  std::function<void (
-    const boost::system::error_code &)
-  > timeout_handler_;
 
+  struct response_packet_data {
+    packet_header_data header;
+    std::uint16_t      text_length;
+    char               text[max_response_text];
+  };
+
+  receive_handler receive_handler_;
   response_packet_data response_;
-  std::function<void (
-    const boost::system::error_code &,
-    std::size_t bytes_transferred)
-  > receive_handler_;
 };
+
+} // namespace sampquery
+
+#endif // SAMPQUERY_QUERY_HPP

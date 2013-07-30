@@ -27,14 +27,16 @@
 
 #include "packet.hpp"
 
-packet_header::packet_header(packet_header_data header)
-  : data_(header)
+namespace sampquery {
+
+packet_header::packet_header(packet_header_data header):
+  data_(header)
 {
 }
 
 packet_header::packet_header(std::uint32_t address, std::uint16_t port,
-                             packet_opcode opcode)
-  : data_(make(address, port, opcode))
+                             packet_opcode opcode):
+  data_(make(address, port, opcode))
 {
 }
 
@@ -51,3 +53,5 @@ bool packet_header::is_valid(const packet_header_data &header) {
   return std::memcmp(header.signature, packet_signature,
                      sizeof(packet_signature)) == 0;
 }
+
+} // namespace sampquery

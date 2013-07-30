@@ -6,5 +6,5 @@ Available options:
   -p [ --port ] arg (=7777)      set server port
   -w [ --password ] arg          set RCON password
   -c [ --command ] arg           set command to be executed
-  -t [ --timeout ] arg (=150)    set connection timeout (in milliseconds)
+  -t [ --timeout ] arg (=150)    set response timeout (in milliseconds)
   -i [ --interactive ]           run in interactive mode

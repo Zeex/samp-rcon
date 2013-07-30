@@ -15,8 +15,8 @@ add_executable(rcon
   packet.cpp
   packet.hpp
   rcon.cpp
-  rcon_client.cpp
-  rcon_client.hpp
+  query.cpp
+  query.hpp
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX)
