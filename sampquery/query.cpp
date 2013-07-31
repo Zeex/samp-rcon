@@ -34,10 +34,11 @@ query::query(query_type type,
              boost::asio::io_service &io_service):
   type_(type), 
   io_service_(io_service),
+  udp_(boost::asio::ip::udp::v4()),
   socket_(io_service),
   timeout_timer_(io_service)
 {
-  socket_.open(boost::asio::ip::udp::v4());
+  socket_.open(udp_);
 }
 
 query::~query() {
@@ -111,7 +112,8 @@ void query::on_timeout(const boost::system::error_code &error) {
 }
 
 void query::cancel() {
-  socket_.cancel();
+  socket_.close();
+  socket_.open(udp_);
 }
 
 std::string query::response_text() const {

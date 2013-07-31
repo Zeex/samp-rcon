@@ -84,7 +84,9 @@ class query {
 
  private:
   query_type type_;
+
   boost::asio::io_service &io_service_;
+  boost::asio::ip::udp udp_;
   boost::asio::ip::udp::endpoint endpoint_;
   boost::asio::ip::udp::socket socket_;
 
