@@ -30,6 +30,20 @@
 
 #include "query.hpp"
 
+namespace {
+
+template<typename T>
+static boost::asio::const_buffers_1 ref_buffer(const T &x) {
+  return boost::asio::buffer(&x, sizeof(x));
+}
+
+template<typename T>
+static boost::asio::mutable_buffers_1 ref_buffer(T &x) {
+  return boost::asio::buffer(&x, sizeof(x));
+}
+
+} // anonymous namespace
+
 namespace sampquery {
 
 query::query(query_type type,
@@ -59,10 +73,11 @@ void query::send(std::vector<boost::asio::const_buffer> &their_buffers) {
   );
 
   std::vector<boost::asio::const_buffer> buffers;
-  buffers.push_back(buffer(&header.signature, sizeof(header.signature)));
-  buffers.push_back(buffer(&header.address,   sizeof(header.address)));
-  buffers.push_back(buffer(&header.port,      sizeof(header.port)));
-  buffers.push_back(buffer(&header.opcode,    sizeof(header.opcode)));
+  buffers.push_back(ref_buffer(header.signature));
+  buffers.push_back(ref_buffer(header.address));
+  buffers.push_back(ref_buffer(header.port));
+  buffers.push_back(ref_buffer(header.opcode));
+
   std::copy(their_buffers.begin(), their_buffers.end(),
             std::back_inserter(buffers));
 
@@ -77,12 +92,12 @@ void query::receive(const boost::posix_time::milliseconds &timeout) {
   using boost::asio::buffer;
 
   std::vector<boost::asio::mutable_buffer> buffers;
-  buffers.push_back(buffer(&response_.header.signature, sizeof(response_.header.signature)));
-  buffers.push_back(buffer(&response_.header.address,   sizeof(response_.header.address)));
-  buffers.push_back(buffer(&response_.header.port,      sizeof(response_.header.port)));
-  buffers.push_back(buffer(&response_.header.opcode,    sizeof(response_.header.opcode)));
-  buffers.push_back(buffer(&response_.text_length,      sizeof(response_.text_length)));
-  buffers.push_back(buffer(&response_.text,             sizeof(response_.text)));
+  buffers.push_back(ref_buffer(response_.header.signature));
+  buffers.push_back(ref_buffer(response_.header.address));
+  buffers.push_back(ref_buffer(response_.header.port));
+  buffers.push_back(ref_buffer(response_.header.opcode));
+  buffers.push_back(ref_buffer(response_.text_length));
+  buffers.push_back(ref_buffer(response_.text));
 
   using std::placeholders::_1;
   using std::placeholders::_2;
@@ -97,19 +112,19 @@ void query::receive(const boost::posix_time::milliseconds &timeout) {
   }
 }
 
-void query::on_receive(const boost::system::error_code &error,
+void query::on_receive(const boost::system::error_code &ec,
                        std::size_t nbytes) {
-  if (packet_header::is_valid(response_.header) || error) {
+  if (packet_header::is_valid(response_.header) || ec) {
     if (receive_handler_) {
-      receive_handler_(error, nbytes);
+      receive_handler_(ec, nbytes);
     }
   }
 }
 
-void query::on_timeout(const boost::system::error_code &error) {
-  if (error != boost::asio::error::operation_aborted) {
+void query::on_timeout(const boost::system::error_code &ec) {
+  if (ec != boost::asio::error::operation_aborted) {
     if (timeout_handler_) {
-      timeout_handler_(error);
+      timeout_handler_(ec);
     }
   }
 }
