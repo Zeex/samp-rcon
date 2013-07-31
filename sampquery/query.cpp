@@ -31,9 +31,11 @@
 namespace sampquery {
 
 query::query(query_type type,
-             boost::asio::io_service &io_service):
+             boost::asio::io_service &io_service,
+             boost::asio::ip::udp::endpoint endpoint):
   type_(type), 
   io_service_(io_service),
+  endpoint_(endpoint),
   udp_(boost::asio::ip::udp::v4()),
   socket_(io_service),
   timeout_timer_(io_service)
@@ -103,11 +105,10 @@ void query::on_receive(const boost::system::error_code &error,
 }
 
 void query::on_timeout(const boost::system::error_code &error) {
-  if (error == boost::asio::error::operation_aborted) {
-    return;
-  }
-  if (timeout_handler_) {
-    timeout_handler_(error);
+  if (error != boost::asio::error::operation_aborted) {
+    if (timeout_handler_) {
+      timeout_handler_(error);
+    }
   }
 }
 

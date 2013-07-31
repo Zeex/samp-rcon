@@ -46,8 +46,13 @@ class query {
   static const int max_response_text = 1024;
 
   query(query_type type,
-        boost::asio::io_service &io_service);
+        boost::asio::io_service &io_service,
+        boost::asio::ip::udp::endpoint endpoint);
   ~query();
+
+  boost::asio::ip::udp::endpoint endpoint() const {
+    return endpoint_;
+  }
 
   void set_endpoint(const boost::asio::ip::udp::endpoint endpoint) {
     endpoint_ = endpoint;

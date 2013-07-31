@@ -34,46 +34,41 @@
 
 #include "sampquery/query.hpp"
 
+static const char prompt_string[] = ">>> ";
+
 class rcon {
  public:
   typedef std::function<void(
     const std::string &output, const boost::system::error_code &error_code)
   > receive_handler;
 
-  rcon(std::string host, std::string port, std::string password):
-    host_(host),
-    port_(port),
-    password_(password),
+  rcon(boost::asio::io_service &io_service,
+       boost::asio::ip::udp::endpoint endpoint):
+    io_service_(io_service),
+    endpoint_(endpoint),
     timeout_(0),
-    io_service_(),
-    query_(sampquery::query_type::rcon_command, io_service_)
+    query_(sampquery::query_type::rcon_command, io_service_, endpoint_)
   {
-    resolve_host();
-    query_.set_endpoint(endpoint_);
-
     using namespace std::placeholders;
     query_.set_timeout_handler(std::bind(&rcon::handle_timeout, this, _1));
     query_.set_receive_handler(std::bind(&rcon::receive_output, this, _1, _2));
   }
-
-  std::string host() const { return host_; }
-  std::string port() const { return port_; }
-  std::string password() const { return password_; }
 
   void set_timeout(boost::posix_time::milliseconds timeout) { timeout_ = timeout; }
   boost::posix_time::milliseconds timeout() const { return timeout_; }
 
   void set_receive_handler(receive_handler handler) { receive_handler_ = handler; }
 
-  void send_command(const std::string &command) {
+  void send_command(const std::string password, std::string &command) {
     using boost::asio::buffer;
 
-    std::uint16_t password_length = password_.length();
-    std::uint16_t command_length  = command.length();
-
     std::vector<boost::asio::const_buffer> send_buffers;
+
+    std::uint16_t password_length = password.length();
     send_buffers.push_back(buffer(&password_length, sizeof(password_length)));
-    send_buffers.push_back(buffer(password_));
+    send_buffers.push_back(buffer(password));
+
+    std::uint16_t command_length  = command.length();
     send_buffers.push_back(buffer(&command_length,  sizeof(command_length)));
     send_buffers.push_back(buffer(command));
 
@@ -81,27 +76,7 @@ class rcon {
     query_.receive(timeout_);
   }
 
-  void run() {
-    io_service_.run();
-  }
-
-  void stop() {
-    io_service_.stop();
-  }
-
  private:
-  void resolve_host() {
-    boost::asio::ip::udp::resolver resolver(io_service_);
-    boost::asio::ip::udp::resolver::query resolver_query(host_, port_);
-    for (auto it = resolver.resolve(resolver_query);
-         it != boost::asio::ip::udp::resolver::iterator(); it++) {
-      if (it->endpoint().address().is_v4()) {
-        endpoint_ = *it;
-        break;
-      }
-    }
-  }
-
   void receive_output(const boost::system::error_code &error_code,
                       std::size_t nbytes) {
     if (receive_handler_) {
@@ -121,25 +96,16 @@ class rcon {
   }
 
  private:
-  std::string host_;
-  std::string port_;
-  std::string password_;
   boost::posix_time::milliseconds timeout_;
   receive_handler receive_handler_;
-  boost::asio::io_service io_service_;
+  boost::asio::io_service &io_service_;
   boost::asio::ip::udp::endpoint endpoint_;
   sampquery::query query_;
 };
 
-static void print_error(const boost::system::system_error &error) {
-  std::cout << "Error: " << error.what() << std::endl;
-}
-
 static bool read_command(std::string &command) {
   return std::getline(std::cin, command).good();
 }
-
-static const char prompt_string[] = ">>> ";
 
 int main(int argc, char **argv) {
   std::string host;
@@ -207,7 +173,21 @@ int main(int argc, char **argv) {
                 << std::flush;
     }
 
-    rcon rcon(host, port, password);
+    boost::asio::io_service io_service;
+    boost::asio::ip::udp::endpoint endpoint;
+
+    boost::asio::ip::udp::resolver resolver(io_service);
+    boost::asio::ip::udp::resolver::query resolver_query(host, port);
+
+    for (auto it = resolver.resolve(resolver_query);
+          it != boost::asio::ip::udp::resolver::iterator(); it++) {
+      if (it->endpoint().address().is_v4()) {
+        endpoint = *it;
+        break;
+      }
+    }
+
+    rcon rcon(io_service, endpoint);
 
     rcon.set_timeout(boost::posix_time::milliseconds(timeout_ms));
     rcon.set_receive_handler([&](const std::string &output,
@@ -220,10 +200,10 @@ int main(int argc, char **argv) {
           if (interactive) {
             std::cout << prompt_string;
             if (read_command(command)) {
-              rcon.send_command(command);
+              rcon.send_command(password, command);
             } else {
               std::cout << std::endl;
-              rcon.stop();
+              io_service.stop();
             }
           }
         } else {
@@ -240,11 +220,11 @@ int main(int argc, char **argv) {
       }
     }
 
-    rcon.send_command(command);
-    rcon.run();
+    rcon.send_command(password, command);
+    io_service.run();
   }
-  catch (boost::system::system_error &e) {
-    print_error(e);
+  catch (std::exception &e) {
+    std::cout << "Error: " << e.what() << std::endl;
     return 1;
   }
 
