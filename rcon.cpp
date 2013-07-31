@@ -87,7 +87,7 @@ class rcon {
   void receive_output(const boost::system::error_code &ec,
                       std::size_t nbytes) {
     if (receive_handler_) {
-      receive_handler_(query_.response_text(), ec);
+      receive_handler_(ec ? std::string() : query_.response_text(), ec);
     }
     if (ec != boost::asio::error::operation_aborted) {
       query_.receive(timeout_);
