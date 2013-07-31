@@ -11,6 +11,10 @@ find_package(Boost 1.49 REQUIRED COMPONENTS
 
 include_directories(${Boost_INCLUDE_DIRS})
 
+if(WIN32)
+  add_definitions(-D_WIN32_WINNT=0x0501)
+endif()
+
 add_executable(rcon
   sampquery/packet.cpp
   sampquery/packet.hpp
