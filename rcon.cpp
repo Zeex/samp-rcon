@@ -32,7 +32,7 @@
 #include <boost/filesystem.hpp>
 #include <boost/program_options.hpp>
 
-#include "query.hpp"
+#include "sampquery/query.hpp"
 
 class rcon {
  public:

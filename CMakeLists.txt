@@ -12,11 +12,11 @@ find_package(Boost 1.49 REQUIRED COMPONENTS
 include_directories(${Boost_INCLUDE_DIRS})
 
 add_executable(rcon
-  packet.cpp
-  packet.hpp
+  sampquery/packet.cpp
+  sampquery/packet.hpp
+  sampquery/query.cpp
+  sampquery/query.hpp
   rcon.cpp
-  query.cpp
-  query.hpp
 )
 
 if(CMAKE_COMPILER_IS_GNUCXX)
