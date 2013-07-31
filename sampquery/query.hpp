@@ -32,7 +32,6 @@
 #include <vector>
 
 #include <boost/asio.hpp>
-#include <boost/system/error_code.hpp>
 #include <boost/date_time.hpp>
 
 #include "packet.hpp"
@@ -59,7 +58,7 @@ class query {
   }
 
   typedef std::function<void(
-    const boost::system::error_code &error_code)
+    const boost::system::error_code &ec)
   > timeout_handler;
 
   void set_timeout_handler(timeout_handler handler) {
@@ -67,7 +66,7 @@ class query {
   }
 
   typedef std::function<void(
-    const boost::system::error_code &error_code, std::size_t nbytes)
+    const boost::system::error_code &ec, std::size_t nbytes)
   > receive_handler;
 
   void set_receive_handler(receive_handler handler) {
@@ -84,8 +83,8 @@ class query {
   std::string response_text() const;
 
  private:
-  void on_receive(const boost::system::error_code &error, std::size_t nbytes);
-  void on_timeout(const boost::system::error_code &error);
+  void on_receive(const boost::system::error_code &ec, std::size_t nbytes);
+  void on_timeout(const boost::system::error_code &ec);
 
  private:
   query_type type_;

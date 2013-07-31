@@ -39,7 +39,7 @@ static const char prompt_string[] = ">>> ";
 class rcon {
  public:
   typedef std::function<void(
-    const std::string &output, const boost::system::error_code &error_code)
+    const std::string &output, const boost::system::error_code &ec)
   > receive_handler;
 
   rcon(boost::asio::io_service &io_service,
@@ -54,10 +54,17 @@ class rcon {
     query_.set_receive_handler(std::bind(&rcon::receive_output, this, _1, _2));
   }
 
-  void set_timeout(boost::posix_time::milliseconds timeout) { timeout_ = timeout; }
-  boost::posix_time::milliseconds timeout() const { return timeout_; }
+  void set_timeout(boost::posix_time::milliseconds timeout) {
+    timeout_ = timeout;
+  }
 
-  void set_receive_handler(receive_handler handler) { receive_handler_ = handler; }
+  boost::posix_time::milliseconds timeout() const {
+    return timeout_;
+  }
+
+  void set_receive_handler(receive_handler handler) {
+    receive_handler_ = handler;
+  }
 
   void send_command(const std::string password, std::string &command) {
     using boost::asio::buffer;
@@ -77,19 +84,19 @@ class rcon {
   }
 
  private:
-  void receive_output(const boost::system::error_code &error_code,
+  void receive_output(const boost::system::error_code &ec,
                       std::size_t nbytes) {
     if (receive_handler_) {
-      receive_handler_(query_.response_text(), error_code);
+      receive_handler_(query_.response_text(), ec);
     }
-    if (error_code != boost::asio::error::operation_aborted) {
+    if (ec != boost::asio::error::operation_aborted) {
       query_.receive(timeout_);
     }
   }
 
-  void handle_timeout(const boost::system::error_code &error_code) {
-    if (error_code) {
-      throw boost::system::system_error(error_code);
+  void handle_timeout(const boost::system::error_code &ec) {
+    if (ec) {
+      throw boost::system::system_error(ec);
     } else {
       query_.cancel();
     }
@@ -148,7 +155,8 @@ int main(int argc, char **argv) {
 
     if (variables.count("help")) {
       auto program_name = boost::filesystem::basename(argv[0]);
-      std::cout << "Usage: " << program_name << " [options]\n\n" << desc << std::endl;
+      std::cout << "Usage: " << program_name << " [options]\n\n"
+                << desc << std::endl;
       return 0;
     }
 
@@ -191,11 +199,11 @@ int main(int argc, char **argv) {
 
     rcon.set_timeout(boost::posix_time::milliseconds(timeout_ms));
     rcon.set_receive_handler([&](const std::string &output,
-                                 const boost::system::error_code &error_code) {
-      if (!error_code) {
+                                 const boost::system::error_code &ec) {
+      if (!ec) {
         std::cout << output << std::endl;
       } else {
-        if (error_code == boost::asio::error::operation_aborted) {
+        if (ec == boost::asio::error::operation_aborted) {
           std::string command;
           if (interactive) {
             std::cout << prompt_string;
@@ -207,7 +215,7 @@ int main(int argc, char **argv) {
             }
           }
         } else {
-          throw boost::system::system_error(error_code);
+          throw boost::system::system_error(ec);
         }
       }
     });
