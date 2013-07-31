@@ -54,7 +54,8 @@ query::query(query_type type,
   endpoint_(endpoint),
   udp_(boost::asio::ip::udp::v4()),
   socket_(io_service),
-  timeout_timer_(io_service)
+  timeout_timer_(io_service),
+  response_()
 {
   socket_.open(udp_);
 }
