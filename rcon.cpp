@@ -214,6 +214,9 @@ int main(int argc, char **argv) {
               io_service.stop();
             }
           }
+        } else if (ec == boost::asio::error::connection_reset) {
+          // If the server happens to be down we just output nothing
+          // and keep running.
         } else {
           throw boost::system::system_error(ec);
         }
