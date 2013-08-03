@@ -52,15 +52,15 @@ query::query(query_type type,
   type_(type), 
   io_service_(io_service),
   endpoint_(endpoint),
-  udp_(boost::asio::ip::udp::v4()),
   socket_(io_service),
   timeout_timer_(io_service),
   response_()
 {
-  socket_.open(udp_);
+  socket_.open(boost::asio::ip::udp::v4());
 }
 
 query::~query() {
+  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
   socket_.close();
 }
 
@@ -131,8 +131,9 @@ void query::on_timeout(const boost::system::error_code &ec) {
 }
 
 void query::cancel() {
+  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
   socket_.close();
-  socket_.open(udp_);
+  socket_.open(boost::asio::ip::udp::v4());
 }
 
 std::string query::response_text() const {
