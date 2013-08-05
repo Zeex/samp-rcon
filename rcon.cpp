@@ -95,8 +95,6 @@ class rcon {
   void handle_timeout(const boost::system::error_code &ec) {
     if (ec) {
       throw boost::system::system_error(ec);
-    } else {
-      query_.cancel();
     }
   }
 

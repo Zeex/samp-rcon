@@ -127,12 +127,15 @@ void query::on_timeout(const boost::system::error_code &ec) {
     if (timeout_handler_) {
       timeout_handler_(ec);
     }
+    cancel();
   }
 }
 
 void query::cancel() {
-  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
-  socket_.close();
+  if (socket_.is_open()) {
+    socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
+    socket_.close();
+  }
   socket_.open(boost::asio::ip::udp::v4());
 }
 
