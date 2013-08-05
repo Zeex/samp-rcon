@@ -44,14 +44,12 @@ class rcon {
 
   rcon(boost::asio::io_service &io_service,
        boost::asio::ip::udp::endpoint endpoint):
-    io_service_(io_service),
-    endpoint_(endpoint),
     timeout_(0),
-    query_(sampquery::query_type::rcon_command, io_service_, endpoint_)
+    query_(sampquery::query_type::rcon_command, io_service, endpoint)
   {
     using namespace std::placeholders;
     query_.set_timeout_handler(std::bind(&rcon::handle_timeout, this, _1));
-    query_.set_receive_handler(std::bind(&rcon::receive_output, this, _1, _2));
+    query_.set_receive_handler(std::bind(&rcon::handle_receive, this, _1, _2));
   }
 
   void set_timeout(boost::posix_time::milliseconds timeout) {
@@ -84,7 +82,7 @@ class rcon {
   }
 
  private:
-  void receive_output(const boost::system::error_code &ec,
+  void handle_receive(const boost::system::error_code &ec,
                       std::size_t nbytes) {
     if (receive_handler_) {
       receive_handler_(ec ? std::string() : query_.response_text(), ec);
@@ -103,11 +101,9 @@ class rcon {
   }
 
  private:
+  sampquery::query query_;
   boost::posix_time::milliseconds timeout_;
   receive_handler receive_handler_;
-  boost::asio::io_service &io_service_;
-  boost::asio::ip::udp::endpoint endpoint_;
-  sampquery::query query_;
 };
 
 static bool read_command(std::string &command) {
