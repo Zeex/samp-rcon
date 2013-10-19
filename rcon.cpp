@@ -99,8 +99,8 @@ class rcon {
   }
 
  private:
-  sampquery::query query_;
   boost::posix_time::milliseconds timeout_;
+  sampquery::query query_;
   receive_handler receive_handler_;
 };
 
