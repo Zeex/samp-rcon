@@ -34,8 +34,6 @@
 
 #include "sampquery/query.hpp"
 
-static const char prompt_string[] = ">>> ";
-
 class rcon {
  public:
   typedef std::function<void(
@@ -104,8 +102,17 @@ class rcon {
   receive_handler receive_handler_;
 };
 
-static bool read_command(std::string &command) {
-  return std::getline(std::cin, command).good();
+void print_prompt() {
+  std::cout << ">>> ";
+}
+
+void print_error(const char *message) {
+  std::cerr << "Error: " << message << std::endl;
+}
+
+void read_command(std::string &command) {
+  print_prompt();
+  std::getline(std::cin, command).good();
 }
 
 int main(int argc, char **argv) {
@@ -164,7 +171,7 @@ int main(int argc, char **argv) {
     }
   }
   catch (boost::program_options::error &e) {
-    std::cerr << e.what() << std::endl;
+    print_error(e.what());
     return 1;
   }
 
@@ -198,19 +205,10 @@ int main(int argc, char **argv) {
         std::cout << output << std::endl;
       } else {
         if (ec == boost::asio::error::operation_aborted) {
-          std::string command;
           if (interactive) {
-            std::cout << prompt_string;
-            if (read_command(command)) {
-              rcon.send_command(password, command);
-            } else {
-              std::cout << std::endl;
-              io_service.stop();
-            }
+            read_command(command);
+            rcon.send_command(password, command);
           }
-        } else if (ec == boost::asio::error::connection_reset) {
-          // If the server happens to be down we just output nothing
-          // and keep running.
         } else {
           throw boost::system::system_error(ec);
         }
@@ -218,18 +216,16 @@ int main(int argc, char **argv) {
     });
 
     if (interactive) {
-      std::cout << prompt_string;
-      if (!read_command(command)) {
-        std::cout << std::endl;
-        return 0;
-      }
+      read_command(command);
+      rcon.send_command(password, command);
+    } else {
+      rcon.send_command(password, command);
     }
 
-    rcon.send_command(password, command);
     io_service.run();
   }
   catch (std::exception &e) {
-    std::cout << "Error: " << e.what() << std::endl;
+    print_error(e.what());
     return 1;
   }
 
