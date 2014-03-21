@@ -60,7 +60,8 @@ query::query(query_type type,
 }
 
 query::~query() {
-  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
+  boost::system::error_code ec;
+  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both, ec);
   socket_.close();
 }
 
@@ -132,10 +133,9 @@ void query::on_timeout(const boost::system::error_code &ec) {
 }
 
 void query::cancel() {
-  if (socket_.is_open()) {
-    socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both);
-    socket_.close();
-  }
+  boost::system::error_code ec;
+  socket_.shutdown(boost::asio::ip::udp::socket::shutdown_both, ec);
+  socket_.close();
   socket_.open(boost::asio::ip::udp::v4());
 }
 
