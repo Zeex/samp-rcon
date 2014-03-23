@@ -215,14 +215,21 @@ int main(int argc, char **argv) {
       }
     });
 
-    if (interactive) {
-      read_command(command);
-      rcon.send_command(password, command);
-    } else {
-      rcon.send_command(password, command);
+    while (true) {
+      try {
+        if (interactive) {
+          read_command(command);
+        }
+        rcon.send_command(password, command);
+        io_service.run();
+      }
+      catch (boost::system::system_error &e) {
+        print_error(e.what());
+        if (!interactive) {
+          break;
+        }
+      }
     }
-
-    io_service.run();
   }
   catch (std::exception &e) {
     print_error(e.what());
