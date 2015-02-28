@@ -23,7 +23,7 @@ add_executable(rcon
   rcon.cpp
 )
 
-if(CMAKE_COMPILER_IS_GNUCXX)
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   set_property(TARGET rcon APPEND_STRING PROPERTY COMPILE_FLAGS "-std=c++11")
   if(UNIX)
 	set_property(TARGET rcon APPEND_STRING PROPERTY LINK_FLAGS "-pthread")
