@@ -215,7 +215,7 @@ int main(int argc, char **argv) {
       }
     });
 
-    while (true) {
+    do {
       try {
         if (interactive) {
           read_command(command);
@@ -225,11 +225,8 @@ int main(int argc, char **argv) {
       }
       catch (boost::system::system_error &e) {
         print_error(e.what());
-        if (!interactive) {
-          break;
-        }
       }
-    }
+    } while (interactive);
   }
   catch (std::exception &e) {
     print_error(e.what());
