@@ -2,9 +2,9 @@ Usage: rcon [options]
 
 Available options:
   -h [ --help ]                  show this message and exit
-  -s [ --host ] arg (=localhost) set server IP address or hostname
+  -s [ --host ] arg (=127.0.0.1) set server IP address or hostname
   -p [ --port ] arg (=7777)      set server port
   -w [ --password ] arg          set RCON password
-  -c [ --command ] arg           set command to be executed
+  -c [ --command ] arg           set command to execute (non-interactive mode)
   -t [ --timeout ] arg (=150)    set response timeout (in milliseconds)
   -i [ --interactive ]           run in interactive mode

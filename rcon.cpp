@@ -139,7 +139,7 @@ int main(int argc, char **argv) {
        "set RCON password")
       ("command,c",
         boost::program_options::value(&command),
-       "set command to be executed")
+       "set command to execute (non-interactive mode)")
       ("timeout,t",
         boost::program_options::value(&timeout_ms)->default_value(150),
        "set response timeout (in milliseconds)")
