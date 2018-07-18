@@ -1,3 +1,8 @@
+RCON
+====
+
+A simple cross platform RCON client for SA-MP.
+
 Usage: rcon [options]
 
 Available options:

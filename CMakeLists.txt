@@ -16,11 +16,11 @@ if(WIN32)
 endif()
 
 add_executable(rcon
-  sampquery/packet.cpp
-  sampquery/packet.hpp
-  sampquery/query.cpp
-  sampquery/query.hpp
-  rcon.cpp
+  src/sampquery/packet.cpp
+  src/sampquery/packet.hpp
+  src/sampquery/query.cpp
+  src/sampquery/query.hpp
+  src/rcon.cpp
 )
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
@@ -31,6 +31,10 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang" OR
   endif()
 endif()
 
+if(MSVC)
+  target_compile_options(rcon PRIVATE "$<$<CONFIG:DEBUG>:/MTd>")
+  target_compile_options(rcon PRIVATE "$<$<CONFIG:RELEASE>:/MT>")
+endif()
 if(WIN32)
   target_link_libraries(rcon ws2_32)
 endif()
