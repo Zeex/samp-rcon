@@ -3,6 +3,7 @@ RCON
 
 A simple cross platform RCON client for SA-MP.
 
+```
 Usage: rcon [options]
 
 Available options:
@@ -13,3 +14,4 @@ Available options:
   -c [ --command ] arg           set command to execute (non-interactive mode)
   -t [ --timeout ] arg (=150)    set response timeout (in milliseconds)
   -i [ --interactive ]           run in interactive mode
+```
