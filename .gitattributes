@@ -1,3 +1,1 @@
-*     text=auto
-*.cpp whitespace=trailing-space, tabwidth=2, tab-in-indent
-*.hpp whitespace=trailing-space, tabwidth=2, tab-in-indent
+* text=auto
