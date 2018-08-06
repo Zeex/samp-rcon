@@ -41,11 +41,19 @@ template<typename T, typename F>
 class AutoClose {
  public:
   AutoClose(T resource, F closeFunc):
-    resource_(resource), closeFunc_(closeFunc)
+    resource_(resource), closeFunc_(closeFunc), isClosed_(false)
   {}
-  ~AutoClose() {
-    closeFunc_(resource_);
+  AutoClose(AutoClose &&other) {
+    resource_ = other.resource_;
+    closeFunc_ = other.closeFunc_;
+    other.isClosed_ = true;
   }
+  ~AutoClose() {
+    if (!isClosed_) {
+      closeFunc_(resource_);
+    }
+  }
+
   AutoClose(const AutoClose &other) = delete;
   void operator =(const AutoClose &other) = delete;
 
@@ -59,7 +67,13 @@ class AutoClose {
  private:
   T resource_;
   F closeFunc_;
+  bool isClosed_;
 };
+
+template<typename T, typename F>
+AutoClose<T, F> MakeAutoClose(T resource, F closeFunc) {
+  return AutoClose<T, F>(resource, closeFunc);
+}
 
 enum class CLType {
   Bool,
@@ -308,7 +322,7 @@ bool SendRCONQuery(
   if (gaiError != 0) {
     return false;
   }
-  AutoClose gaiResultAC(gaiResult, freeaddrinfo);
+  auto gaiResultAC = MakeAutoClose(gaiResult, freeaddrinfo);
 
   ds_socket_t sock = -1;
   addrinfo *addressPtr = gaiResult;
@@ -326,7 +340,7 @@ bool SendRCONQuery(
     gaiResult = nullptr;
     return false;
   }
-  AutoClose sockAC(sock, ds_close);
+  auto sockAC = MakeAutoClose(sock, ds_close);
 
   sockaddr address;
   std::size_t addressLength = addressPtr->ai_addrlen;
@@ -453,11 +467,9 @@ bool SendRCONCommand(const std::string &host,
     std::uint16_t length;
     std::memcpy(&length, data, sizeof(length));
     if (length > 0) {
-      std::size_t currentLength = output.size();
-      output.resize(currentLength + length + 1);
-      std::memcpy(output.data() + currentLength,
-                  data + sizeof(length),
-                  length);
+      for (std::size_t i = 0; i < length; i++) {
+        output.push_back(static_cast<char>(*(data + sizeof(length) + i)));
+      }
       output.push_back('\n');
     }
     return true;
