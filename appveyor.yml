@@ -5,7 +5,8 @@ configuration:
   - Release
 
 before_build:
-  - cmake -G "Visual Studio 14 2015" source/compiler -DCMAKE_GENERATOR_TOOLSET=v100
+  - mkdir build && cd build
+  - cmake ../ -G "Visual Studio 14 2015" -DCMAKE_GENERATOR_TOOLSET=v100
 
 build_script:
   - cmake --build . --config %CONFIGURATION%
