@@ -13,14 +13,21 @@ if(WIN32)
   add_definitions(-D_WIN32_WINNT=0x0501)
 endif()
 
-add_executable(rcon
+add_library(dumbsockets
   src/dumbsockets.c
   src/dumbsockets.h
-  src/rcon.cpp
 )
+
+add_executable(rcon
+  src/rcon.cpp
+  src/rcon_version.h.in
+  ${CMAKE_CURRENT_BINARY_DIR}/src/rcon_version.h
+)
+target_link_libraries(rcon dumbsockets)
+
 if(MSVC)
   target_compile_options(rcon PRIVATE /std:c++latest)
 endif()
-if(CMAKE_COMPILER_IS_GNUCXX)
+if(CMAKE_COMPILER_IS_GNUCXX OR "${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   target_compile_options(rcon PRIVATE -std=c++1z -Wall)
 endif()

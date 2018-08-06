@@ -29,7 +29,6 @@
 #include <cstring>
 #include <functional>
 #include <iostream>
-#include <optional>
 #include <string>
 #include <unordered_set>
 #include <vector>
@@ -86,7 +85,8 @@ struct CLOption
     : shortName_(shortName),
       longName_(longName),
       type_(type),
-      isRequired_(isRequired)
+      isRequired_(isRequired),
+      hasValue_(false)
   {
     assert(!longName.empty());
   }
@@ -100,30 +100,30 @@ struct CLOption
   bool IsRequired() const
     { return isRequired_; }
   bool HasValue() const
-    { return value_.has_value(); }
-  CLValue Value() const
-    { return value_.value(); }
+    { return hasValue_; }
+  const CLValue &Value() const
+    { return value_; }
   void SetValue(bool value)
-    { CLValue v; v.boolValue = value; value_ = v; }
+    { hasValue_ = true; value_.boolValue = value; }
   void SetValue(const char *value)
-    { CLValue v; v.stringValue = value; value_ = v; }
+    { hasValue_ = true; value_.stringValue = value; }
   void SetValue(int value)
-    { CLValue v; v.intValue = value; value_ = v; }
+    { hasValue_ = true; value_.intValue = value; }
   void SetValue(long value)
-    { CLValue v; v.longValue = value; value_ = v; }
+    { hasValue_ = true; value_.longValue = value; }
 
   std::string stringValue() const {
     switch (type_) {
       case CLType::Bool:
-        return std::to_string(value_.value().boolValue);
+        return std::to_string(value_.boolValue);
       case CLType::String:
-        return value_.value().stringValue;
+        return value_.stringValue;
       case CLType::Int:
-        return std::to_string(value_.value().intValue);
+        return std::to_string(value_.intValue);
       case CLType::Long:
-        return std::to_string(value_.value().longValue);
+        return std::to_string(value_.longValue);
     }
-    return "";
+    return std::string();
   }
 
  private:
@@ -131,7 +131,8 @@ struct CLOption
   std::string longName_;
   CLType type_;
   bool isRequired_;
-  std::optional<CLValue> value_;
+  bool hasValue_;
+  CLValue value_;
 };
 
 enum class RCONQueryType: char {
