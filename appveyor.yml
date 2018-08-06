@@ -1,0 +1,29 @@
+version: '{build}'
+image: Visual Studio 2015
+
+configuration:
+  - Release
+
+before_build:
+  - cmake -G "Visual Studio 14 2015" source/compiler -DCMAKE_GENERATOR_TOOLSET=v100
+
+build_script:
+  - cmake --build . --config %CONFIGURATION%
+  - cmake --build . --config %CONFIGURATION% --target package
+
+on_failure:
+  - type Testing\Temporary\LastTest.log
+
+artifacts:
+  - path: rcon-*-windows.zip
+    name: RCON executable
+
+deploy:
+  description: '<Put release description here>'
+  provider: GitHub
+  auth_token:
+    secure: xhaxB+TKUkVbIdmjPxca6T72wOV18gD5wfv0M5dbnrqbzDvcQTGwTuYHKzLn5hal
+  artifact: /rcon-.*-windows\.zip/
+  draft: true
+  on:
+    appveyor_repo_tag: true

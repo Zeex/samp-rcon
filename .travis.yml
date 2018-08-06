@@ -1,0 +1,40 @@
+language:
+  - c
+  - cpp
+
+os:
+  - linux
+  - osx
+
+addons:
+  apt:
+    packages:
+      - cmake
+  brew:
+    packages:
+      - cmake
+
+before_script:
+  - mkdir build && cd build
+  - cmake ../ -DCMAKE_BUILD_TYPE=Release
+
+script:
+  - make
+  - make package
+
+after_failure:
+  - cat Testing/Temporary/LastTest.log
+
+deploy:
+  provider: releases
+  api_key:
+    secure: lIfs6LlEv5qtl8G/AbPur1pl+D0rv6bk36aaSa9+sZ0miuAAWd8lGVG+gfsrZ3YiYLIBqZ2rgt6HIUghImUgj15AWMloYxY1NEcOqcQoe0k0d/8oD8qeSAuecKl6LNEAp2yyX78qfKkFMKpWGLhLoVw0OG5R4uekpkUzILSyDY4=
+  file_glob: true
+  file:
+    - 'rcon-*-linux.tar.gz'
+    - 'rcon-*-macos.zip'
+  draft: true
+  skip_cleanup: true
+  on:
+    tags: true
+    repo: Zeex/samp-rcon
