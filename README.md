@@ -3,6 +3,8 @@ RCON
 
 A simple cross platform RCON client for SA-MP.
 
+![Demo](demo.gif)
+
 ```
 Usage: rcon [options]
 
