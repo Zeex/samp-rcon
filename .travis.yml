@@ -7,9 +7,9 @@ matrix:
     - os: linux
       dist: xenial
       sudo: required
-      compiler: gcc
+      compiler: g++
     - os: osx
-      compiler: clang
+      compiler: clang++
 
 addons:
   apt:
