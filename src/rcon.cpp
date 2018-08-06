@@ -38,7 +38,7 @@
 
 namespace {
 
-template <typename T, typename F>
+template<typename T, typename F>
 class AutoClose {
  public:
   AutoClose(T resource, F closeFunc):
@@ -326,7 +326,7 @@ bool SendRCONQuery(
     return false;
   }
   AutoClose sockAC(sock, ds_close);
-  
+
   sockaddr address;
   std::size_t addressLength = addressPtr->ai_addrlen;
   std::memcpy(&address, addressPtr->ai_addr, addressPtr->ai_addrlen);
@@ -336,7 +336,7 @@ bool SendRCONQuery(
 
   auto outIpAddress = addressV4->sin_addr.s_addr;
   auto outPort = addressV4->sin_port;
-  
+
   RCONQueryPacket outPacket;
   std::memcpy(&outPacket.magic, "SAMP", 4);
   outPacket.address = outIpAddress;
@@ -391,15 +391,16 @@ bool SendRCONQuery(
     return false;
   }
 
-  fd_set selectFds;
-  FD_ZERO(&selectFds);
-  FD_SET(sock, &selectFds);
   timeval selectTimeout;
   selectTimeout.tv_sec = 0;
   selectTimeout.tv_usec = timeout * 1000;
 
   for (;;) {
-    auto selectResult = select(1,
+    fd_set selectFds;
+    FD_ZERO(&selectFds);
+    FD_SET(sock, &selectFds);
+
+    auto selectResult = select(sock + 1,
                                &selectFds,
                                nullptr,
                                nullptr,
@@ -527,8 +528,8 @@ int main(int argc, char **argv) {
       std::cout << ">>> ";
     }
   } else {
-    std::cerr 
-      << "Error: Either --command or --interactive option should be provided" 
+    std::cerr
+      << "Error: Either --command or --interactive option should be provided"
       << std::endl;
   }
 
