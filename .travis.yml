@@ -4,8 +4,6 @@ language:
 
 os:
   - linux
-    dist: xenial
-    sudo: required
   - osx
 
 addons:
