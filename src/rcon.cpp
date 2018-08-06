@@ -275,13 +275,14 @@ bool ParseOptions(int argc,
     }
   }
   for (auto &option : options) {
+    if (option->Type() != CLType::Bool
+        && !option->HasValue()
+        && foundOptions.find(option->LongName()) != foundOptions.cend()) {
+      error = "Option requires a value: --" + option->LongName();
+      return false;
+    }
     if (option->IsRequired() && !option->HasValue()) {
-      if (option->Type() != CLType::Bool
-          && foundOptions.find(option->LongName()) != foundOptions.cend()) {
-        error = "Option requires a value: --" + option->LongName();
-      } else {
-        error = "Option is required: --" + option->LongName();
-      }
+      error = "Option is required: --" + option->LongName();
       return false;
     }
   }
@@ -293,7 +294,8 @@ bool SendRCONQuery(
   const std::string &port,
   const RCONQuery &query,
   long timeout,
-  const RCONResponseHandler &responseHandler)
+  const RCONResponseHandler &responseHandler,
+  std::string &error)
 {
   addrinfo gaiHints = {0};
   gaiHints.ai_family = AF_INET;
@@ -370,6 +372,7 @@ bool SendRCONQuery(
 
   if (requiresPassword) {
     if (query.Password().empty()) {
+      error = "Password is required";
       return false;
     }
     AppendString(query.Password());
@@ -407,7 +410,6 @@ bool SendRCONQuery(
     if (selectResult == 0) {
       return true;
     }
-
     std::vector<std::uint8_t> inData;
     inData.resize(4096);
     auto numBytesReceived = recvfrom(
@@ -420,15 +422,13 @@ bool SendRCONQuery(
     if (numBytesReceived <= 0) {
       return false;
     }
-
     auto inPacket = reinterpret_cast<RCONQueryPacket *>(inData.data());
     if (std::memcmp(inPacket, &outPacket, sizeof(RCONQueryPacket)) != 0) {
       return false;
     }
-
     auto responseData = inData.data() + sizeof(RCONQueryPacket);
     if (!responseHandler(responseData)) {
-      return true;
+      break;
     }
   }
 
@@ -440,7 +440,8 @@ bool SendRCONCommand(const std::string &host,
                      const std::string &password,
                      const std::string &command,
                      long timeout,
-                     std::string &output)
+                     std::string &output,
+                     std::string &error)
 {
   RCONQuery query{RCONQueryType::Execute};
   query.SetPassword(password);
@@ -459,7 +460,7 @@ bool SendRCONCommand(const std::string &host,
     }
     return true;
   };
-  return SendRCONQuery(host, port, query, timeout, responseHandler);
+  return SendRCONQuery(host, port, query, timeout, responseHandler, error);
 }
 
 } // namespace
@@ -504,8 +505,11 @@ int main(int argc, char **argv) {
   if (commandOption.HasValue()) {
     std::string command = commandOption.Value().stringValue;
     std::string output;
-    if (SendRCONCommand(host, port, password, command, timeout, output)) {
+    std::string error;
+    if (SendRCONCommand(host, port, password, command, timeout, output, error)) {
       std::cout << output << std::endl;
+    } else if (!error.empty()) {
+      std::cerr << "Error: " << error << std::endl;
     }
   } else if (interactiveOption.HasValue()
              && interactiveOption.Value().boolValue) {
@@ -514,11 +518,18 @@ int main(int argc, char **argv) {
     std::cout << ">>> ";
     while (std::getline(std::cin, command)) {
       std::string output;
-      if (SendRCONCommand(host, port, password, command, timeout, output)) {
+      std::string error;
+      if (SendRCONCommand(host, port, password, command, timeout, output, error)) {
         std::cout << output << std::flush;
+      } else if (!error.empty()) {
+        std::cerr << "Error: " << error << std::endl;
       }
       std::cout << ">>> ";
     }
+  } else {
+    std::cerr 
+      << "Error: Either --command or --interactive option should be provided" 
+      << std::endl;
   }
 
   std::exit(EXIT_SUCCESS);
