@@ -4,7 +4,7 @@ RCON
 [![Build Status][build_status]][build]
 [![Build Status - Windows][build_status_win]][build_win]
 
-A simple cross platform RCON client for SA-MP.
+A simple cross-platform RCON client for SA-MP - works on Linux, macOS, Windows.
 
 ![Demo](demo.gif)
 
