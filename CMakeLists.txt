@@ -16,23 +16,20 @@ if(WIN32)
   add_definitions(-D_WIN32_WINNT=0x0501)
 endif()
 
-add_library(dumbsockets
-  src/dumbsockets.c
-  src/dumbsockets.h
-)
-
 add_executable(rcon
   src/rcon.cpp
   src/rcon_version.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/src/rcon_version.h
 )
+if(WIN32)
+  target_link_libraries(rcon ws2_32)
+endif()
 if(MSVC)
   target_compile_options(rcon PRIVATE /std:c++latest)
 endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
   target_compile_options(rcon PRIVATE -std=c++1z -Wall)
 endif()
-target_link_libraries(rcon dumbsockets)
 
 install(TARGETS rcon RUNTIME DESTINATION .)
 

@@ -32,48 +32,38 @@
 #include <string>
 #include <unordered_set>
 #include <vector>
-#include "dumbsockets.h"
+#ifdef _WIN32
+  #include <winsock2.h>
+  #include <ws2tcpip.h>
+  #define close_socket closesocket
+  typedef int socklen_t;
+  typedef SOCKET socket_t;
+#else
+  #include <sys/socket.h>
+  #include <netdb.h>
+  #include <unistd.h>
+  #define close_socket close
+  typedef int socket_t;
+#endif
 #include "rcon_version.h"
 
 namespace {
 
-template<typename T, typename F>
-class AutoClose {
+template<typename Resource, typename Releaser>
+class ScopedResource {
  public:
-  AutoClose(T resource, F closeFunc):
-    resource_(resource), closeFunc_(closeFunc), isClosed_(false)
+  ScopedResource(Resource resource, Releaser closeFunc):
+    resource_(resource), release_(closeFunc)
   {}
-  AutoClose(AutoClose &&other) {
-    resource_ = other.resource_;
-    closeFunc_ = other.closeFunc_;
-    other.isClosed_ = true;
+  ~ScopedResource() {
+    release_(resource_);
   }
-  ~AutoClose() {
-    if (!isClosed_) {
-      closeFunc_(resource_);
-    }
-  }
-
-  AutoClose(const AutoClose &other) = delete;
-  void operator =(const AutoClose &other) = delete;
-
-  operator T() const {
-    return resource_;
-  }
-  void SetResource(T resource) {
-    resource_ = resource;
-  }
-
+  ScopedResource(const ScopedResource &other) = delete;
+  ScopedResource& operator=(const ScopedResource &other) = delete;
  private:
-  T resource_;
-  F closeFunc_;
-  bool isClosed_;
+  Resource resource_;
+  Releaser release_;
 };
-
-template<typename T, typename F>
-AutoClose<T, F> MakeAutoClose(T resource, F closeFunc) {
-  return AutoClose<T, F>(resource, closeFunc);
-}
 
 enum class CLType {
   Bool,
@@ -203,10 +193,10 @@ void PrintUsage() {
         << "show this message and exit\n"
       << "-s, --host <hostname>      "
         << "name or IP address of SA-MP server (default is 127.0.0.1)\n"
-      << "-p, --port <port>          "
-        << "server port (default is 7777)\n"
-      << "-w, --password <string>    "
+      << "-p, --password <string>    "
         << "RCON password\n"
+      << "-P, --port <port>          "
+        << "server port (default is 7777)\n"
       << "-c, --command <command>    "
         << "execute command and exit\n"
       << "-t, --timeout <number>     "
@@ -318,16 +308,17 @@ bool SendRCONQuery(
   gaiHints.ai_socktype = SOCK_DGRAM;
   addrinfo *gaiResult;
   int gaiError =
-    ds_getaddrinfo(host.c_str(), port.c_str(), &gaiHints, &gaiResult);
+    getaddrinfo(host.c_str(), port.c_str(), &gaiHints, &gaiResult);
   if (gaiError != 0) {
+    error = "Could not resolve address";
     return false;
   }
-  auto gaiResultAC = MakeAutoClose(gaiResult, freeaddrinfo);
+  auto gaiResultHolder = ScopedResource(gaiResult, freeaddrinfo);
 
-  ds_socket_t sock = -1;
+  socket_t sock = -1;
   addrinfo *addressPtr = gaiResult;
   while (addressPtr != nullptr) {
-    sock = ds_socket(
+    sock = socket(
       addressPtr->ai_family,
       addressPtr->ai_socktype,
       addressPtr->ai_protocol);
@@ -337,13 +328,13 @@ bool SendRCONQuery(
     addressPtr = addressPtr->ai_next;
   }
   if (sock < 0) {
-    gaiResult = nullptr;
+    error = "Could not open socket";
     return false;
   }
-  auto sockAC = MakeAutoClose(sock, ds_close);
 
+  auto sockHolder = ScopedResource(sock, close_socket);
   sockaddr address;
-  std::size_t addressLength = addressPtr->ai_addrlen;
+  auto addressLength = static_cast<int>(addressPtr->ai_addrlen);
   std::memcpy(&address, addressPtr->ai_addr, addressPtr->ai_addrlen);
   auto addressV4 = reinterpret_cast<sockaddr_in *>(&address);
   gaiResult = nullptr;
@@ -398,11 +389,12 @@ bool SendRCONQuery(
 
   auto numBytesSent = sendto(sock,
     reinterpret_cast<const char *>(outData.data()),
-    outData.size(),
+    static_cast<int>(outData.size()),
     0,
     &address,
     addressLength);
   if (numBytesSent <= 0) {
+    error = "Could not send request";
     return false;
   }
 
@@ -415,31 +407,35 @@ bool SendRCONQuery(
     FD_ZERO(&selectFds);
     FD_SET(sock, &selectFds);
 
-    auto selectResult = select(sock + 1,
+    auto selectResult = select(static_cast<int>(sock) + 1,
                                &selectFds,
                                nullptr,
                                nullptr,
                                &selectTimeout);
     if (selectResult < 0) {
+      error = "Select failed";
       return false;
     }
     if (selectResult == 0) {
-      return true;
+      error = "Request timed out";
+      return false;
     }
     std::vector<std::uint8_t> inData;
     inData.resize(4096);
     auto numBytesReceived = recvfrom(
       sock,
       reinterpret_cast<char *>(inData.data()),
-      inData.size(),
+      static_cast<int>(inData.size()),
       0,
       nullptr,
       nullptr);
     if (numBytesReceived <= 0) {
+      error = "Request timed out";
       return false;
     }
     auto inPacket = reinterpret_cast<RCONQueryPacket *>(inData.data());
     if (std::memcmp(inPacket, &outPacket, sizeof(RCONQueryPacket)) != 0) {
+      error = "Invalid packet received";
       return false;
     }
     auto responseData = inData.data() + sizeof(RCONQueryPacket);
@@ -482,8 +478,8 @@ bool SendRCONCommand(const std::string &host,
 int main(int argc, char **argv) {
   CLOption helpOption("h", "help", CLType::Bool, false);
   CLOption hostOption("H", "host", CLType::String, false);
-  CLOption portOption("p", "port", CLType::String, false);
-  CLOption passwordOption("w", "password", CLType::String, true);
+  CLOption passwordOption("p", "password", CLType::String, true);
+  CLOption portOption("P", "port", CLType::String, false);
   CLOption commandOption("c", "command", CLType::String, false);
   CLOption timeoutOption("t", "timeout", CLType::Long, false);
   CLOption interactiveOption("i", "interactive", CLType::Bool, false);
@@ -516,6 +512,15 @@ int main(int argc, char **argv) {
   long timeout =
     timeoutOption.HasValue() ? timeoutOption.Value().longValue : 150;
 
+#ifdef _WIN32
+  WSADATA ws2_data;
+  int wsa_result = WSAStartup(MAKEWORD(2, 2), &ws2_data);
+  if (wsa_result != 0) {
+    fprintf(stderr, "Failed to initialize WinSock2: %d\n", wsa_result);
+    std::exit(EXIT_FAILURE);
+  }
+#endif
+
   if (commandOption.HasValue()) {
     std::string command = commandOption.Value().stringValue;
     std::string output;
@@ -542,7 +547,7 @@ int main(int argc, char **argv) {
     }
   } else {
     std::cerr
-      << "Error: Either --command or --interactive option should be provided"
+      << "Error: Either --command or --interactive must be used"
       << std::endl;
   }
 
