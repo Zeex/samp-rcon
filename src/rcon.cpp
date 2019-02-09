@@ -203,7 +203,7 @@ typedef std::function<bool(const std::uint8_t *responseData)>
 void PrintUsage() {
     std::cerr
       << "Usage: rcon [options]\n\n"
-      << "--help                 "
+      << "--help                     "
         << "show this message and exit\n"
       << "-h, --host <hostname>      "
         << "name or IP address of SA-MP server (default is 127.0.0.1)\n"

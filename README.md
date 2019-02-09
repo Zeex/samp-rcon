@@ -11,7 +11,7 @@ A simple cross-platform RCON client for SA-MP - works on Linux, macOS, Windows.
 ```
 Usage: rcon [options]
 
---help                 show this helpful message and exit
+--help                     show this helpful message and exit
 -h, --host <hostname>      name or IP address of SA-MP server (default is 127.0.0.1)
 -p, --password <string>    RCON password
 -P, --port <port>          server port (default is 7777)

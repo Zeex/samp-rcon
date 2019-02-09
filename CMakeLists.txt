@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.0)
 project(rcon)
 
 set(RCON_VERSION_MAJOR 2)
-set(RCON_VERSION_MINOR 0)
+set(RCON_VERSION_MINOR 1)
 set(RCON_VERSION_PATCH 0)
-set(RCON_VERSION 2.0)
+set(RCON_VERSION 2.1)
 
 configure_file(
   src/rcon_version.h.in
