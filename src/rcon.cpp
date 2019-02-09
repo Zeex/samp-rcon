@@ -447,8 +447,7 @@ bool SendRCONQuery(
       return false;
     }
     if (selectResult == 0) {
-      error = "Request timed out";
-      return false;
+      return true;
     }
     std::vector<std::uint8_t> inData;
     inData.resize(4096);
