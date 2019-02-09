@@ -39,9 +39,10 @@
   typedef int socklen_t;
   typedef SOCKET socket_t;
 #else
-  #include <sys/socket.h>
+  #include <errno.h>
   #include <netdb.h>
   #include <unistd.h>
+  #include <sys/socket.h>
   #define close_socket close
   typedef int socket_t;
 #endif
@@ -189,9 +190,9 @@ typedef std::function<bool(const std::uint8_t *responseData)>
 void PrintUsage() {
     std::cerr
       << "Usage: rcon [options]\n\n"
-      << "-h, --help                 "
+      << "--help                 "
         << "show this message and exit\n"
-      << "-s, --host <hostname>      "
+      << "-h, --host <hostname>      "
         << "name or IP address of SA-MP server (default is 127.0.0.1)\n"
       << "-p, --password <string>    "
         << "RCON password\n"
@@ -223,11 +224,13 @@ bool StringStartsWith(const std::string &s, const char *prefix) {
 }
 
 bool OptionNameMatches(const std::string &token, CLOption *option) {
-  if (StringStartsWith(token, "-")
+  if (!option->ShortName().empty()
+      && StringStartsWith(token, "-")
       && token.find(option->ShortName()) == 1) {
     return true;
   }
-  if (StringStartsWith(token, "--")
+  if (!option->LongName().empty()
+      && StringStartsWith(token, "--")
       && token.find(option->LongName()) == 2) {
     return true;
   }
@@ -294,6 +297,33 @@ bool ParseOptions(int argc,
   return true;
 }
 
+std::string GetLastSystemErrorMessage() {
+#ifdef _WIN32
+  char *buffer = NULL;
+  DWORD format_flags = FORMAT_MESSAGE_FROM_SYSTEM
+      | FORMAT_MESSAGE_IGNORE_INSERTS
+      | FORMAT_MESSAGE_ALLOCATE_BUFFER
+      | FORMAT_MESSAGE_MAX_WIDTH_MASK;
+  auto result = FormatMessageA(
+      format_flags,
+      NULL,
+      GetLastError(),
+      0,
+      (char *)&buffer,
+      0,
+      NULL);
+  if (result > 0) {
+    std::string message(buffer);
+    LocalFree(buffer);
+    return message;
+  } else {
+    return "Unknown error";
+  }
+#else
+  return strerror(errno);
+#endif
+}
+
 bool SendRCONQuery(
   const std::string &host,
   const std::string &port,
@@ -310,7 +340,7 @@ bool SendRCONQuery(
   int gaiError =
     getaddrinfo(host.c_str(), port.c_str(), &gaiHints, &gaiResult);
   if (gaiError != 0) {
-    error = "Could not resolve address";
+    error = std::string("getaddrinfo: ") + gai_strerror(gaiError);
     return false;
   }
   auto gaiResultHolder = ScopedResource(gaiResult, freeaddrinfo);
@@ -328,7 +358,7 @@ bool SendRCONQuery(
     addressPtr = addressPtr->ai_next;
   }
   if (sock < 0) {
-    error = "Could not open socket";
+    error = "socket: " + GetLastSystemErrorMessage();;
     return false;
   }
 
@@ -394,7 +424,7 @@ bool SendRCONQuery(
     &address,
     addressLength);
   if (numBytesSent <= 0) {
-    error = "Could not send request";
+    error = "sendto: " + GetLastSystemErrorMessage();
     return false;
   }
 
@@ -413,7 +443,7 @@ bool SendRCONQuery(
                                nullptr,
                                &selectTimeout);
     if (selectResult < 0) {
-      error = "Select failed";
+      error = "select: " + GetLastSystemErrorMessage();
       return false;
     }
     if (selectResult == 0) {
@@ -435,7 +465,7 @@ bool SendRCONQuery(
     }
     auto inPacket = reinterpret_cast<RCONQueryPacket *>(inData.data());
     if (std::memcmp(inPacket, &outPacket, sizeof(RCONQueryPacket)) != 0) {
-      error = "Invalid packet received";
+      error = "Invalid response format";
       return false;
     }
     auto responseData = inData.data() + sizeof(RCONQueryPacket);
@@ -473,11 +503,11 @@ bool SendRCONCommand(const std::string &host,
   return SendRCONQuery(host, port, query, timeout, responseHandler, error);
 }
 
-} // namespace
+} // anonymous namespace
 
 int main(int argc, char **argv) {
-  CLOption helpOption("h", "help", CLType::Bool, false);
-  CLOption hostOption("H", "host", CLType::String, false);
+  CLOption helpOption("", "help", CLType::Bool, false);
+  CLOption hostOption("h", "host", CLType::String, false);
   CLOption passwordOption("p", "password", CLType::String, true);
   CLOption portOption("P", "port", CLType::String, false);
   CLOption commandOption("c", "command", CLType::String, false);
