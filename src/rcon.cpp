@@ -54,17 +54,30 @@ template<typename Resource, typename Releaser>
 class ScopedResource {
  public:
   ScopedResource(Resource resource, Releaser closeFunc):
-    resource_(resource), release_(closeFunc)
+    resource_(resource), release_(closeFunc), isReleased_(false)
   {}
+  ScopedResource(ScopedResource &&other) {
+    resource_ = other.resource_;
+    release_ = other.release_;
+    other.isReleased_ = true;
+  }
   ~ScopedResource() {
-    release_(resource_);
+    if (!isReleased_) {
+      release_(resource_);
+    }
   }
   ScopedResource(const ScopedResource &other) = delete;
   ScopedResource& operator=(const ScopedResource &other) = delete;
  private:
   Resource resource_;
   Releaser release_;
+  bool isReleased_;
 };
+
+template<typename T, typename U>
+ScopedResource<T, U> MakeScopedResource(T resource, U release) {
+  return ScopedResource<T, U>(resource, release);
+}
 
 enum class CLType {
   Bool,
@@ -343,7 +356,7 @@ bool SendRCONQuery(
     error = std::string("getaddrinfo: ") + gai_strerror(gaiError);
     return false;
   }
-  auto gaiResultHolder = ScopedResource(gaiResult, freeaddrinfo);
+  auto gaiResultHolder = MakeScopedResource(gaiResult, freeaddrinfo);
 
   socket_t sock = -1;
   addrinfo *addressPtr = gaiResult;
@@ -362,7 +375,7 @@ bool SendRCONQuery(
     return false;
   }
 
-  auto sockHolder = ScopedResource(sock, close_socket);
+  auto sockHolder = MakeScopedResource(sock, close_socket);
   sockaddr address;
   auto addressLength = static_cast<int>(addressPtr->ai_addrlen);
   std::memcpy(&address, addressPtr->ai_addr, addressPtr->ai_addrlen);

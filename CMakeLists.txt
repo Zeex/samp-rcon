@@ -28,7 +28,7 @@ if(MSVC)
   target_compile_options(rcon PRIVATE /std:c++latest)
 endif()
 if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
-  target_compile_options(rcon PRIVATE -std=c++1z -Wall)
+  target_compile_options(rcon PRIVATE -std=c++17 -Wall)
 endif()
 
 install(TARGETS rcon RUNTIME DESTINATION .)
