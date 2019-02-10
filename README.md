@@ -6,8 +6,6 @@ RCON
 
 A simple cross-platform RCON client for SA-MP - works on Linux, macOS, Windows.
 
-![Demo](demo.gif)
-
 ```
 Usage: rcon [options]
 
