@@ -104,6 +104,7 @@ struct CLOption
       longName_(longName),
       type_(type),
       isRequired_(isRequired),
+      value_(),
       hasValue_(false)
   {
     assert(!longName.empty());
@@ -370,7 +371,7 @@ bool SendRCONQuery(
     }
     addressPtr = addressPtr->ai_next;
   }
-  if (sock < 0) {
+  if (sock < 0 || addressPtr == nullptr) {
     error = "socket: " + GetLastSystemErrorMessage();;
     return false;
   }
