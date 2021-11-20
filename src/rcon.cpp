@@ -104,8 +104,8 @@ struct CLOption
       longName_(longName),
       type_(type),
       isRequired_(isRequired),
-      value_(),
-      hasValue_(false)
+      hasValue_(false),
+      value_()
   {
     assert(!longName.empty());
   }
