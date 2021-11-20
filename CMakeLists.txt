@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.1)
 project(rcon)
 
 set(RCON_VERSION_MAJOR 2)
@@ -10,6 +10,7 @@ configure_file(
   src/rcon_version.h.in
   src/rcon_version.h
 )
+
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
 
 if(WIN32)
@@ -21,14 +22,11 @@ add_executable(rcon
   src/rcon_version.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/src/rcon_version.h
 )
+
+set_target_properties(rcon PROPERTIES CXX_STANDARD 17)
+
 if(WIN32)
   target_link_libraries(rcon ws2_32)
-endif()
-if(MSVC)
-  target_compile_options(rcon PRIVATE /std:c++latest)
-endif()
-if(CMAKE_COMPILER_IS_GNUCXX OR ${CMAKE_CXX_COMPILER_ID} MATCHES Clang)
-  target_compile_options(rcon PRIVATE -std=c++17 -Wall)
 endif()
 
 install(TARGETS rcon RUNTIME DESTINATION .)
